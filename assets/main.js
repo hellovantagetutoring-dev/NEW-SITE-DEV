@@ -30,17 +30,23 @@
   var marquee=document.getElementById('marquee');
   if(marquee){
     var tutors=[
-      {name:'Jason',atar:'99.85'},
-      {name:'Yun',atar:'99.90'},
-      {name:'Keeran',atar:'99.50'},
-      {name:'Brooklyn',atar:'99.75'},
-      {name:'Jize',atar:'99.85'},
-      {name:'Ken',atar:'99.85'},
-      {name:'Lincoln',atar:'99.80'}
+      {name:'Jason',atar:'99.85',img:'/assets/tutors/jason-liu.jpg'},
+      {name:'Yun',atar:'99.90',img:'/assets/tutors/yun-hao.jpg'},
+      {name:'Lincoln',atar:'99.80',img:'/assets/tutors/lincoln-murray-brown.jpg'},
+      {name:'Keeran',atar:'99.50',img:'/assets/tutors/keeran-subendranathan.jpg'},
+      {name:'Brooklyn',atar:'99.75',img:'/assets/tutors/brooklyn-tran.jpg'},
+      {name:'Jize',atar:'99.85',img:'/assets/tutors/jize-peng.jpg'},
+      {name:'Ken',atar:'99.85',init:'KW'},
+      {name:'Crystal',init:'CT'}
     ];
     var html='';
     for(var i=0;i<tutors.length;i++){
-      html+='<span class="chip"><b>'+tutors[i].name+'</b><span class="score">'+tutors[i].atar+' ATAR</span></span>';
+      var t=tutors[i];
+      var av=t.img
+        ? '<img class="chip-av" src="'+t.img+'" alt="" width="40" height="40" loading="eager" decoding="async">'
+        : '<span class="chip-av chip-av--init" aria-hidden="true">'+(t.init||t.name.charAt(0))+'</span>';
+      var score=t.atar ? '<span class="score">'+t.atar+' ATAR</span>' : '';
+      html+='<span class="chip">'+av+'<b>'+t.name+'</b>'+score+'</span>';
     }
     marquee.innerHTML=html+html;
   }
@@ -313,6 +319,8 @@
       if(wrap.classList.contains('avail-wrap--display')) return;
       var painting = false;
       var paintOn = true;
+      var touchDragged = false;
+      var touchCell = null;
 
       function cellFromEvent(e){
         var t = e.target;
@@ -341,9 +349,10 @@
         e.preventDefault();
       });
 
-      // Stop label click from double-toggling after paint
       wrap.addEventListener('click', function(e){
-        if(cellFromEvent(e)) e.preventDefault();
+        if(!cellFromEvent(e)) return;
+        // Mousedown already toggles; block label click to avoid double-toggle.
+        e.preventDefault();
       });
 
       wrap.addEventListener('mouseover', function(e){
@@ -358,7 +367,7 @@
       }
       window.addEventListener('mouseup', endPaint);
 
-      // Touch drag
+      // Touch: tap toggles once; drag paints without double-toggle
       wrap.addEventListener('touchstart', function(e){
         if(!e.touches || !e.touches[0]) return;
         var el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
@@ -366,20 +375,38 @@
         if(!cell || !wrap.contains(cell)) return;
         var input = cell.querySelector('input[type=checkbox]');
         if(!input || input.disabled) return;
-        painting = true;
+        touchDragged = false;
+        touchCell = cell;
         paintOn = !input.checked;
-        wrap.classList.add('is-painting');
-        paint(cell);
       }, {passive:true});
 
       wrap.addEventListener('touchmove', function(e){
-        if(!painting || !e.touches || !e.touches[0]) return;
+        if(!e.touches || !e.touches[0]) return;
+        touchDragged = true;
         var el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
         var cell = el && el.closest ? el.closest('.avail-cell') : null;
-        if(cell && wrap.contains(cell)) paint(cell);
+        if(!cell || !wrap.contains(cell)) return;
+        if(!painting){
+          painting = true;
+          wrap.classList.add('is-painting');
+        }
+        paint(cell);
       }, {passive:true});
 
-      window.addEventListener('touchend', endPaint);
+      wrap.addEventListener('touchend', function(){
+        if(!touchDragged && touchCell){
+          paint(touchCell);
+        }
+        touchCell = null;
+        touchDragged = false;
+        endPaint();
+      });
+
+      wrap.addEventListener('touchcancel', function(){
+        touchCell = null;
+        touchDragged = false;
+        endPaint();
+      });
     });
 
     applySelected();
@@ -400,16 +427,29 @@
 
   // Availability expand (enrolment + tutors)
   [].forEach.call(document.querySelectorAll('[data-avail-expand]'), function(btn){
+    var id = btn.getAttribute('data-avail-expand');
+    var panel = document.getElementById(id);
+    var show = btn.querySelector('.avail-expand-show');
+    var hide = btn.querySelector('.avail-expand-hide');
+    var isDisplay = !!(btn.closest && btn.closest('.avail-wrap--display'));
+
+    // Tutor calendars: say if morning section has any available slots
+    if(isDisplay && panel && show){
+      var hasMorning = panel.querySelectorAll('.avail-half.on').length > 0;
+      show.textContent = hasMorning
+        ? 'Show 9am – 3pm · has times'
+        : 'Show 9am – 3pm · no times';
+      if(hide) hide.textContent = 'Hide 9am – 3pm';
+      btn.classList.toggle('has-morning', hasMorning);
+      btn.classList.toggle('no-morning', !hasMorning);
+    }
+
     btn.addEventListener('click', function(){
-      var id = btn.getAttribute('data-avail-expand');
-      var panel = document.getElementById(id);
       if(!panel) return;
       var open = panel.hasAttribute('hidden');
       if(open) panel.removeAttribute('hidden');
       else panel.setAttribute('hidden','');
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      var show = btn.querySelector('.avail-expand-show');
-      var hide = btn.querySelector('.avail-expand-hide');
       if(show) show.hidden = open;
       if(hide) hide.hidden = !open;
     });

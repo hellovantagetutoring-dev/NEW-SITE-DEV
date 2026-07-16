@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#07070C" media="(prefers-color-scheme: dark)">
 <title>Our Tutors | Vantage Tutoring</title>
 <meta name="description" content="Meet the Vantage Tutoring team. Gold and Platinum tutors who are Queensland's highest-scoring recent graduates, matched to your subjects and goals.">
 <link rel="canonical" href="https://vantagetutoring.com.au/tutors">
@@ -14,11 +16,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/styles.css?v=enquiry27">
+<link rel="stylesheet" href="/assets/styles.css?v=theme16">
 </head>
 <body>
 
-<div class="bg-fx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 
 <header>
   <div class="nav wrap">
@@ -38,7 +39,6 @@
 <section class="page-hero">
   <div class="wrap reveal">
     <div class="crumbs"><a href="/">Home</a><span>/</span>Tutors</div>
-    <span class="pill"><span class="dot"></span>Our tutors</span>
     <h1>Meet the tutors behind <span class="grad-text">the results.</span></h1>
     <p>Every Vantage tutor is a recent, top-scoring QCE graduate, placed into one of two tiers and matched to your subjects and goals within 24 hours.</p>
   </div>
@@ -48,61 +48,85 @@
   <div class="wrap">
     <div class="tutor-filters" id="tutorFilters">
       <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">
-        <span class="filter-toggle-label">Filters</span>
+        <span class="filter-toggle-label">Filter tutors</span>
         <span class="filter-toggle-meta" id="filterToggleMeta"></span>
         <svg class="filter-toggle-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </button>
-      <div class="filter-panel" id="filterPanel">
+      <div class="filter-panel" id="filterPanel" hidden>
 
-      <div class="filter-group filter-group--when">
-        <button type="button" class="filter-subtoggle" id="dayFilterToggle" aria-expanded="false" aria-controls="dayFilterPanel">
-          <span>Find a tutor for your times</span>
-          <svg class="filter-toggle-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <div class="filter-subpanel" id="dayFilterPanel" hidden>
-          <span class="filter-label">Days</span>
-          <div class="filter-checks" id="filterDays" role="group" aria-label="Filter by day">
-            <label class="filter-check"><input type="checkbox" value="Mon">Mon</label>
-            <label class="filter-check"><input type="checkbox" value="Tue">Tue</label>
-            <label class="filter-check"><input type="checkbox" value="Wed">Wed</label>
-            <label class="filter-check"><input type="checkbox" value="Thu">Thu</label>
-            <label class="filter-check"><input type="checkbox" value="Fri">Fri</label>
-            <label class="filter-check"><input type="checkbox" value="Sat">Sat</label>
-            <label class="filter-check"><input type="checkbox" value="Sun">Sun</label>
+      <div class="filter-sections">
+        <div class="filter-section filter-section--when">
+          <div class="filter-section-head">
+            <span class="filter-section-num">1</span>
+            <div>
+              <span class="filter-section-title">Find a tutor for your times</span>
+              <span class="filter-section-desc">Days and time of day</span>
+            </div>
           </div>
-          <span class="filter-label">Time of day</span>
-          <div class="filter-checks" id="filterBands" role="group" aria-label="Filter by time of day">
-            <label class="filter-check"><input type="checkbox" value="morning">Morning <em>9am–12pm</em></label>
-            <label class="filter-check"><input type="checkbox" value="afternoon">Afternoon <em>12–5pm</em></label>
-            <label class="filter-check"><input type="checkbox" value="evening">Evening <em>5–9pm</em></label>
+          <div class="filter-section-body" id="dayFilterPanel">
+            <span class="filter-label">Days</span>
+            <div class="filter-checks" id="filterDays" role="group" aria-label="Filter by day">
+              <label class="filter-check"><input type="checkbox" value="Mon">Mon</label>
+              <label class="filter-check"><input type="checkbox" value="Tue">Tue</label>
+              <label class="filter-check"><input type="checkbox" value="Wed">Wed</label>
+              <label class="filter-check"><input type="checkbox" value="Thu">Thu</label>
+              <label class="filter-check"><input type="checkbox" value="Fri">Fri</label>
+              <label class="filter-check"><input type="checkbox" value="Sat">Sat</label>
+              <label class="filter-check"><input type="checkbox" value="Sun">Sun</label>
+            </div>
+            <span class="filter-label">Time of day</span>
+            <div class="filter-checks" id="filterBands" role="group" aria-label="Filter by time of day">
+              <label class="filter-check"><input type="checkbox" value="morning">Morning <em>9am–12pm</em></label>
+              <label class="filter-check"><input type="checkbox" value="afternoon">Afternoon <em>12–5pm</em></label>
+              <label class="filter-check"><input type="checkbox" value="evening">Evening <em>5–9pm</em></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-section">
+          <div class="filter-section-head">
+            <span class="filter-section-num">2</span>
+            <div>
+              <span class="filter-section-title">Subject</span>
+              <span class="filter-section-desc">Must teach all selected</span>
+            </div>
+          </div>
+          <div class="filter-section-body">
+            <div class="filter-chips" data-filter="subject" role="group" aria-label="Filter by subject">
+              <button type="button" class="filter-chip active" data-value="all">All</button>
+              <button type="button" class="filter-chip" data-value="maths-methods">Maths Methods</button>
+              <button type="button" class="filter-chip" data-value="specialist-maths">Specialist Maths</button>
+              <button type="button" class="filter-chip" data-value="chemistry">Chemistry</button>
+              <button type="button" class="filter-chip" data-value="physics">Physics</button>
+              <button type="button" class="filter-chip" data-value="literature">Literature</button>
+              <button type="button" class="filter-chip" data-value="economics">Economics</button>
+              <button type="button" class="filter-chip" data-value="philosophy">Philosophy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-section">
+          <div class="filter-section-head">
+            <span class="filter-section-num">3</span>
+            <div>
+              <span class="filter-section-title">Degree area</span>
+              <span class="filter-section-desc">University field</span>
+            </div>
+          </div>
+          <div class="filter-section-body">
+            <div class="filter-chips" data-filter="degree" role="group" aria-label="Filter by degree area">
+              <button type="button" class="filter-chip active" data-value="all">All</button>
+              <button type="button" class="filter-chip" data-value="medicine">Medicine / Health</button>
+              <button type="button" class="filter-chip" data-value="engineering">Engineering</button>
+              <button type="button" class="filter-chip" data-value="science">Science</button>
+              <button type="button" class="filter-chip" data-value="commerce">Commerce / Finance</button>
+              <button type="button" class="filter-chip" data-value="law">Law</button>
+              <button type="button" class="filter-chip" data-value="music">Music</button>
+            </div>
           </div>
         </div>
       </div>
-      <div class="filter-group">
-        <span class="filter-label">Subject <em class="filter-hint">(must teach all selected)</em></span>
-        <div class="filter-chips" data-filter="subject" role="group" aria-label="Filter by subject">
-          <button type="button" class="filter-chip active" data-value="all">All</button>
-          <button type="button" class="filter-chip" data-value="maths-methods">Maths Methods</button>
-          <button type="button" class="filter-chip" data-value="specialist-maths">Specialist Maths</button>
-          <button type="button" class="filter-chip" data-value="chemistry">Chemistry</button>
-          <button type="button" class="filter-chip" data-value="physics">Physics</button>
-          <button type="button" class="filter-chip" data-value="literature">Literature</button>
-          <button type="button" class="filter-chip" data-value="economics">Economics</button>
-          <button type="button" class="filter-chip" data-value="philosophy">Philosophy</button>
-        </div>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">Degree area</span>
-        <div class="filter-chips" data-filter="degree" role="group" aria-label="Filter by degree area">
-          <button type="button" class="filter-chip active" data-value="all">All</button>
-          <button type="button" class="filter-chip" data-value="medicine">Medicine / Health</button>
-          <button type="button" class="filter-chip" data-value="engineering">Engineering</button>
-          <button type="button" class="filter-chip" data-value="science">Science</button>
-          <button type="button" class="filter-chip" data-value="commerce">Commerce / Finance</button>
-          <button type="button" class="filter-chip" data-value="law">Law</button>
-          <button type="button" class="filter-chip" data-value="music">Music</button>
-        </div>
-      </div>
+
       <p class="filter-count" id="filterCount" aria-live="polite"></p>
       <p class="filter-empty" id="filterEmpty" hidden>No tutors match these filters. <button type="button" class="filter-reset" id="filterReset">Clear filters</button></p>
       </div>
@@ -110,20 +134,19 @@
   </div>
 </section>
 
-<!-- Replace the placeholder tutors below with your real team profiles and photos. -->
 <section class="tight tutor-tier-section" data-tier="platinum">
   <div class="wrap">
     <div class="section-head reveal">
-      <span class="pill"><span class="dot"></span>Platinum tutors</span>
-      <h2 class="shine-platinum">Platinum</h2>
-      <p>Our most elite tutors, ideal for students targeting top university entry and 99+ subject results.</p>
+      <h2 class="shine-platinum">Platinum tutors</h2>
+      <p class="tier-rank">Top 0.2% of graduates</p>
+      <p>Our most elite tutors, ideal for students targeting top university entry and 99+ subject scores.</p>
     </div>
     <div class="tutor-grid">
       <div class="tutor-card platinum reveal" data-subjects="" data-degrees="medicine science" data-slots="Sat 1:00pm,Sat 1:30pm">
         <div class="tutor-body">
 <div class="tutor-top">
           <div class="tutor-avatar"><img src="/assets/tutors/jason-liu.jpg" alt="Jason Liu"></div>
-          <div><div class="tutor-name">Jason Liu</div><span class="tutor-tier">Platinum tutor</span></div>
+          <div><div class="tutor-name">Jason Liu</div><span class="tutor-tier"><span class="shine-platinum">Platinum tutor</span></span></div>
         </div>
         <div class="tutor-atar"><span class="a-num gold-text">99.85</span><span class="a-lbl">ATAR</span></div>
         <div class="tutor-school">Brisbane State High School</div>
@@ -144,16 +167,11 @@
         <div class="tutor-body">
 <div class="tutor-top">
           <div class="tutor-avatar"><img src="/assets/tutors/yun-hao.jpg" alt="Yun Hao"></div>
-          <div><div class="tutor-name">Yun Hao</div><span class="tutor-tier">Platinum tutor</span></div>
+          <div><div class="tutor-name">Yun Hao</div><span class="tutor-tier"><span class="shine-platinum">Platinum tutor</span></span></div>
         </div>
         <div class="tutor-atar"><span class="a-num gold-text">99.90</span><span class="a-lbl">ATAR</span></div>
         <div class="tutor-school">Brisbane State High School</div>
         <div class="tutor-degree">Bachelor of Medical Science, provisional MD entry (Griffith)</div>
-        
-        <div class="tutor-hobbies">
-          <div class="tutor-sec-label">Hobbies &amp; interests</div>
-          <p>Contact us to learn more.</p>
-        </div>
         <div class="tutor-scores">
           <span class="score"><b>100</b> Physics</span>
           <span class="score"><b>100</b> Maths Methods</span>
@@ -170,7 +188,7 @@
         <div class="tutor-body">
 <div class="tutor-top">
           <div class="tutor-avatar"><img src="/assets/tutors/lincoln-murray-brown.jpg" alt="Lincoln Murray-Brown"></div>
-          <div><div class="tutor-name">Lincoln Murray-Brown</div><span class="tutor-tier">Platinum tutor</span></div>
+          <div><div class="tutor-name">Lincoln Murray-Brown</div><span class="tutor-tier"><span class="shine-platinum">Platinum tutor</span></span></div>
         </div>
         <div class="tutor-atar"><span class="a-num gold-text">99.80</span><span class="a-lbl">ATAR</span></div>
         <div class="tutor-degree">Bachelor of Engineering (Honours) / Science (UQ)</div>
@@ -198,8 +216,8 @@
 <section class="tight tutor-tier-section" data-tier="gold">
   <div class="wrap">
     <div class="section-head reveal">
-      <span class="pill"><span class="dot"></span>Gold tutors</span>
-      <h2 class="shine-gold">Gold</h2>
+      <h2 class="shine-gold">Gold tutors</h2>
+      <p class="tier-rank">Top 1% of graduates</p>
       <p>High-achieving tutors with a track record of lifting subject scores across Years 8 to 12.</p>
     </div>
     <div class="tutor-grid">
@@ -207,16 +225,11 @@
         <div class="tutor-body">
 <div class="tutor-top">
           <div class="tutor-avatar"><img src="/assets/tutors/keeran-subendranathan.jpg" alt="Keeran Subendranathan"></div>
-          <div><div class="tutor-name">Keeran Subendranathan</div><span class="tutor-tier">Gold tutor</span></div>
+          <div><div class="tutor-name">Keeran Subendranathan</div><span class="tutor-tier"><span class="shine-gold">Gold tutor</span></span></div>
         </div>
         <div class="tutor-atar"><span class="a-num gold-text">99.50</span><span class="a-lbl">ATAR</span></div>
         <div class="tutor-school">Brisbane State High School</div>
         <div class="tutor-degree">Bachelor of Advanced Finance and Economics (UQ)</div>
-        
-        <div class="tutor-hobbies">
-          <div class="tutor-sec-label">Hobbies &amp; interests</div>
-          <p>Contact us to learn more.</p>
-        </div>
         <div class="tutor-scores">
           <span class="score"><b>100</b> Literature</span>
           <span class="score"><b>99</b> Economics</span>
@@ -231,7 +244,7 @@
         <div class="tutor-body">
 <div class="tutor-top">
           <div class="tutor-avatar"><img src="/assets/tutors/brooklyn-tran.jpg" alt="Brooklyn Tran"></div>
-          <div><div class="tutor-name">Brooklyn Tran</div><span class="tutor-tier">Gold tutor</span></div>
+          <div><div class="tutor-name">Brooklyn Tran</div><span class="tutor-tier"><span class="shine-gold">Gold tutor</span></span></div>
         </div>
         <div class="tutor-atar"><span class="a-num gold-text">99.75</span><span class="a-lbl">ATAR</span></div>
         <div class="tutor-school">Brisbane State High School</div>
@@ -239,7 +252,7 @@
         
         <div class="tutor-hobbies">
           <div class="tutor-sec-label">Hobbies &amp; interests</div>
-          <p>Contact us to learn more.</p>
+          <p>Reading, playing guitar, cooking, baking, making coffee, and knitting.</p>
         </div>
         <div class="tutor-scores">
           <span class="score"><b>100</b> Literature</span>
@@ -258,7 +271,7 @@
         <div class="tutor-body">
 <div class="tutor-top">
           <div class="tutor-avatar"><img src="/assets/tutors/jize-peng.jpg" alt="Jize Peng"></div>
-          <div><div class="tutor-name">Jize Peng</div><span class="tutor-tier">Gold tutor</span></div>
+          <div><div class="tutor-name">Jize Peng</div><span class="tutor-tier"><span class="shine-gold">Gold tutor</span></span></div>
         </div>
         <div class="tutor-atar"><span class="a-num gold-text">99.85</span><span class="a-lbl">ATAR</span></div>
         <div class="tutor-school">Saint Stephen's College</div>
@@ -287,16 +300,11 @@
         <div class="tutor-body">
 <div class="tutor-top">
           <div class="tutor-avatar">KW</div>
-          <div><div class="tutor-name">Ken Wu</div><span class="tutor-tier">Gold tutor</span></div>
+          <div><div class="tutor-name">Ken Wu</div><span class="tutor-tier"><span class="shine-gold">Gold tutor</span></span></div>
         </div>
         <div class="tutor-atar"><span class="a-num gold-text">99.85</span><span class="a-lbl">ATAR</span></div>
         <div class="tutor-school">Somerset College</div>
         <div class="tutor-degree">Bachelor of Law and Commerce (USyd)</div>
-        
-        <div class="tutor-hobbies">
-          <div class="tutor-sec-label">Hobbies &amp; interests</div>
-          <p>Contact us to learn more.</p>
-        </div>
         <div class="tutor-scores">
           <span class="score"><b>98</b> Maths Methods</span>
           <span class="score"><b>98</b> Specialist Maths</span>
@@ -313,14 +321,9 @@
         <div class="tutor-body">
 <div class="tutor-top">
           <div class="tutor-avatar">CT</div>
-          <div><div class="tutor-name">Crystal Tsao</div><span class="tutor-tier">Gold tutor</span></div>
+          <div><div class="tutor-name">Crystal Tsao</div><span class="tutor-tier"><span class="shine-gold">Gold tutor</span></span></div>
         </div>
         <div class="tutor-school">Brisbane State High School</div>
-        
-        <div class="tutor-hobbies">
-          <div class="tutor-sec-label">Hobbies &amp; interests</div>
-          <p>Contact us for more about Crystal.</p>
-        </div>
         </div>
         <div class="tutor-avail-cal">
           <div class="tutor-sec-label">Weekly availability</div>
@@ -356,13 +359,14 @@
         <a href="/reviews">Reviews</a>
         <a href="/about">About</a>
         <a href="/contact">Contact</a>
+        <a href="/legal">Legal</a>
       </div>
       <div class="footer-social">
         <a href="https://www.linkedin.com/company/89952543/" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5C4.98 4.88 3.86 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.24 8.5h4.52V24H.24V8.5zM8.34 8.5h4.33v2.11h.06c.6-1.14 2.08-2.34 4.28-2.34 4.58 0 5.42 3.01 5.42 6.93V24h-4.52v-7.55c0-1.8-.03-4.11-2.5-4.11-2.5 0-2.89 1.95-2.89 3.98V24H8.34V8.5z"/></svg></a>
         <a href="https://www.instagram.com/vantage_tutoring/" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
       </div>
     </div>
-    <div class="footer-bottom">Vantage Tutoring &copy; 2026 · vantagetutoring.com.au · All rights reserved.</div>
+    <div class="footer-bottom">Vantage Tutoring &copy; 2026 · All rights reserved.</div>
   </div>
 </footer>
 
@@ -376,10 +380,21 @@
   var filterPanel=document.getElementById('filterPanel');
   var filterToggleMeta=document.getElementById('filterToggleMeta');
   if(filterToggle && filterPanel){
-    filterToggle.addEventListener('click', function(){
-      var open=filterRoot.classList.toggle('is-open');
+    function setFiltersOpen(open){
+      filterRoot.classList.toggle('is-open', open);
       filterToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if(open) filterPanel.removeAttribute('hidden');
+      else filterPanel.setAttribute('hidden','');
+    }
+    filterToggle.addEventListener('click', function(){
+      setFiltersOpen(!filterRoot.classList.contains('is-open'));
     });
+    setFiltersOpen(false);
+    if(location.hash==='#when'){
+      setFiltersOpen(true);
+      var bar=document.getElementById('tutorFilterBar');
+      if(bar && bar.scrollIntoView) setTimeout(function(){ bar.scrollIntoView({behavior:'smooth',block:'start'}); }, 50);
+    }
   }
 
   var subjects=[];
@@ -391,36 +406,8 @@
   var resetBtn=document.getElementById('filterReset');
   var subjectGroup=filterRoot.querySelector('[data-filter="subject"]');
   var degreeGroup=filterRoot.querySelector('[data-filter="degree"]');
-  var dayFilterToggle=document.getElementById('dayFilterToggle');
-  var dayFilterPanel=document.getElementById('dayFilterPanel');
   var filterDays=document.getElementById('filterDays');
   var filterBands=document.getElementById('filterBands');
-
-  if(dayFilterToggle && dayFilterPanel){
-    function openDayFilter(){
-      dayFilterPanel.removeAttribute('hidden');
-      dayFilterToggle.setAttribute('aria-expanded','true');
-      dayFilterToggle.classList.add('is-open');
-      if(window.matchMedia && window.matchMedia('(max-width:920px)').matches){
-        filterRoot.classList.add('is-open');
-        if(filterToggle) filterToggle.setAttribute('aria-expanded','true');
-      }
-    }
-    dayFilterToggle.addEventListener('click', function(){
-      var open=dayFilterPanel.hasAttribute('hidden');
-      if(open) openDayFilter();
-      else{
-        dayFilterPanel.setAttribute('hidden','');
-        dayFilterToggle.setAttribute('aria-expanded','false');
-        dayFilterToggle.classList.remove('is-open');
-      }
-    });
-    if(location.hash==='#when'){
-      openDayFilter();
-      var bar=document.getElementById('tutorFilterBar');
-      if(bar && bar.scrollIntoView) setTimeout(function(){ bar.scrollIntoView({behavior:'smooth',block:'start'}); }, 50);
-    }
-  }
 
   // Afternoon label is 12–5pm → include the 5pm hour (5:00 & 5:30).
   // Evening 5–9pm overlaps 5pm so either band matches Crystal Thu 5pm.
@@ -598,6 +585,6 @@
   apply();
 })();
 </script>
-<script src="/assets/main.js?v=enquiry21"></script>
+<script src="/assets/main.js?v=light1"></script>
 </body>
 </html>
