@@ -3,12 +3,12 @@
 
 Renders local QCAA past-paper PDFs (CC BY 4.0, (c) State of Queensland QCAA)
 to page images and rebuilds the manifest consumed by
-vantage-ai/past-papers/index.html.
+past-papers/index.html.
 
 Output layout (matches the live viewer):
-  vantage-ai/past-papers/img/{docId}/{n}.jpg   e.g. img/mm-20-p1-mc/1.jpg
-  vantage-ai/past-papers/pdf/{docId}.pdf       original QCAA PDF (download)
-  vantage-ai/past-papers/manifest.js           window.PP_MANIFEST = {...}
+  past-papers/img/{docId}/{n}.jpg   e.g. img/mm-20-p1-mc/1.jpg
+  past-papers/pdf/{docId}.pdf       original QCAA PDF (download)
+  past-papers/manifest.js           window.PP_MANIFEST = {...}
 """
 import os, re, json, shutil
 import fitz
@@ -19,7 +19,7 @@ SRC = {
 }
 SUBJECT_NAMES = {'mm': 'Mathematical Methods', 'sm': 'Specialist Mathematics'}
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, 'vantage-ai', 'past-papers')
+OUT = os.path.join(ROOT, 'past-papers')
 ZOOM, QUALITY = 1.8, 72
 
 KIND_LABEL = {
