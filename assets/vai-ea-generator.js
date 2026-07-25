@@ -112,7 +112,7 @@
     if(resultEl) resultEl.hidden = true;
     var emptyEl = document.getElementById('vaiGenEmpty');
     if(emptyEl){
-      emptyEl.innerHTML = '<p>No questions match these filters. Clear a topic, difficulty, year, or question-type filter — or switch between <strong>Past exam papers</strong> and <strong>AI generated</strong> — then generate again.</p>';
+      emptyEl.innerHTML = '<p>No questions match these filters. Clear a topic, difficulty, year, or question-type filter  -  or switch between <strong>Past exam papers</strong> and <strong>AI generated</strong>  -  then generate again.</p>';
       emptyEl.setAttribute('aria-hidden', 'false');
     }
   }

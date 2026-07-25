@@ -157,7 +157,7 @@
     if(stemMath) text = stemMath.prepareExamStem(text);
     text = repairStemMath(text);
     if(isExamJunk(text) || (stemMath && stemMath.isMathBroken(text))){
-      return '<p class="vai-stem-empty">Question text unavailable — try another question.</p>';
+      return '<p class="vai-stem-empty">Question text unavailable  -  try another question.</p>';
     }
 
     var head = '';

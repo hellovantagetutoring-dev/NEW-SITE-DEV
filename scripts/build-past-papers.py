@@ -59,7 +59,7 @@ def doc_id(subj, d):
 
 def label(d):
     lab = KIND_LABEL[d['kind']]
-    core = ('Paper %d \u2014 %s' % (d['paper'], lab)) if d['paper'] else \
+    core = ('Paper %d - %s' % (d['paper'], lab)) if d['paper'] else \
            (lab + ' (Papers 1 & 2)')
     return ('Sample: ' + core) if d['sample'] else core
 

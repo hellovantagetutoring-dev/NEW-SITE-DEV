@@ -1825,6 +1825,33 @@ footer{border-top:1px solid var(--stroke);padding:44px 0 30px;margin-top:20px;}
 }
 
 /* Vantage AI page */
+.vai-coming-soon-wrap{
+  position:relative;border-radius:var(--radius);overflow:hidden;
+  border:1px solid var(--stroke);
+}
+.vai-coming-soon-blur{
+  filter:blur(7px);opacity:.5;pointer-events:none;user-select:none;
+  transform:scale(1.01);
+}
+.vai-coming-soon-overlay{
+  position:absolute;inset:0;z-index:2;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:28px 20px;text-align:center;
+  background:var(--glass-bg);
+  backdrop-filter:blur(10px);
+}
+.vai-coming-soon-badge{
+  margin:0;font:800 12px/1 'Plus Jakarta Sans',sans-serif;
+  letter-spacing:.14em;text-transform:uppercase;
+  padding:11px 20px;border-radius:999px;
+  border:1px solid var(--stroke-strong);
+  background:var(--surface);
+  color:var(--text);
+}
+.vai-coming-soon-text{
+  margin:0;max-width:420px;font:500 14.5px/1.55 Inter,sans-serif;color:var(--muted);
+}
+.vai-coming-soon-text a{color:inherit;text-decoration:underline;text-underline-offset:3px;}
 .vai-plus-hero-bar{padding-top:0;}
 .vai-plus-hero-card{
   display:grid;grid-template-columns:minmax(0,220px) 1fr;gap:24px;align-items:center;
@@ -2146,10 +2173,13 @@ footer{border-top:1px solid var(--stroke);padding:44px 0 30px;margin-top:20px;}
 .vai-page-hero .vai-hero-note a{color:var(--gold-deep);font-weight:600;}
 .vplus-included-bar{
   position:sticky;top:64px;z-index:45;
-  padding:16px 0 18px;
+  padding:14px 0 16px;
   border-bottom:1px solid var(--glass-border);
   background:color-mix(in srgb,var(--bg) 92%,transparent);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.vplus-included-bar > .wrap{
+  max-width:640px;margin-left:auto;margin-right:auto;
 }
 .vplus-included-head{
   display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
@@ -2166,10 +2196,10 @@ footer{border-top:1px solid var(--stroke);padding:44px 0 30px;margin-top:20px;}
 .vplus-included-amt .vplus-per{font-size:16px;font-weight:700;color:var(--muted);}
 .btn.btn-sm{padding:9px 18px;font-size:13px;gap:6px;}
 .vplus-jump-nav{
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;
 }
 .vplus-jump-item{
-  display:flex;flex-direction:column;gap:3px;padding:12px 14px;
+  display:flex;flex-direction:column;gap:3px;padding:10px 12px;
   border-radius:12px;border:1px solid var(--glass-border);
   background:var(--glass-fill-soft);text-decoration:none;color:inherit;
   transition:border-color .2s,box-shadow .2s,transform .2s;
@@ -2179,8 +2209,8 @@ footer{border-top:1px solid var(--stroke);padding:44px 0 30px;margin-top:20px;}
   box-shadow:0 12px 28px -20px rgba(107,76,224,.3);
   transform:translateY(-1px);
 }
-.vplus-jump-title{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:14px;}
-.vplus-jump-desc{font-size:12px;color:var(--muted-2);line-height:1.35;}
+.vplus-jump-title{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:13px;}
+.vplus-jump-desc{font-size:11.5px;color:var(--muted-2);line-height:1.35;}
 #vantage-ai,#upload,#plus-chemistry,#plus-retrieval{scroll-margin-top:152px;}
 @media (max-width:720px){
   .vplus-jump-nav{grid-template-columns:repeat(2,1fr);}

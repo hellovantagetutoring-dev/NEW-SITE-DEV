@@ -4,9 +4,9 @@
   /*
    * Curated worked solutions for past-exam stems.
    * Step schema (strict line-by-line):
-   *   { m: '<latex>', e: '<one-sentence explanation>' }  — one mathematical step per line
-   *   { h: '<heading>' }                                 — section heading
-   *   { f: '<latex>', e: '<explanation>' }               — final answer (bold emphasis)
+   *   { m: '<latex>', e: '<one-sentence explanation>' }   -  one mathematical step per line
+   *   { h: '<heading>' }                                  -  section heading
+   *   { f: '<latex>', e: '<explanation>' }                -  final answer (bold emphasis)
    * Legacy schema { t: 'text'|'math'|'math-display', v: ... } is still rendered by the engine.
    */
 
@@ -30,7 +30,7 @@
       { m: '29 > 25', e: 'The total exceeds the threshold near t = 12.' },
       { m: '29 \\times 1000 = 29\\,000 > 25\\,000', e: 'Convert to a raw count to match the claim.' },
       { h: 'Conclusion' },
-      { f: '\\text{Jane\u2019s claim is reasonable}', e: 'The combined population exceeds 25 000 for a period around t = 12 months (and by periodicity, around t = 0 it does not, so the claim holds only for parts of the two years — which is what Jane asserted).' }
+      { f: '\\text{Jane\u2019s claim is reasonable}', e: 'The combined population exceeds 25 000 for a period around t = 12 months (and by periodicity, around t = 0 it does not, so the claim holds only for parts of the two years  -  which is what Jane asserted).' }
     ];
   }
 

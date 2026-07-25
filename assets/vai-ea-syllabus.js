@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
 
-  /** QCAA General senior syllabus 2025 — Unit 3 & 4 topic titles (Mathematical Methods v1.3). */
+  /** QCAA General senior syllabus 2025  -  Unit 3 & 4 topic titles (Mathematical Methods v1.3). */
   var methods = {
     unit3: {
       title: 'Unit 3: Further calculus and introduction to statistics',
@@ -27,7 +27,7 @@
   };
 
   /**
-   * Specialist Mathematics — QCAA General senior syllabus 2025 (Unit 3 & 4 topic titles).
+   * Specialist Mathematics  -  QCAA General senior syllabus 2025 (Unit 3 & 4 topic titles).
    * Methods titles are verbatim from syllabus v1.3. Confirm Specialist titles against your school’s syllabus PDF if required.
    */
   var specialist = {
