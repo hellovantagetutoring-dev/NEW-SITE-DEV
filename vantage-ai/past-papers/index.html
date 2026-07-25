@@ -25,6 +25,10 @@
 .pp-subject-pill.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 .pp-year{margin-bottom:10px}
 .pp-year-head{font:700 12px/1 'Plus Jakarta Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 4px 6px}
+.pp-year-subhead{font:600 11px/1.2 'Plus Jakarta Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin:10px 4px 4px;padding-left:2px}
+.pp-year-subhead--sample{color:#B9822E}
+@media (prefers-color-scheme:dark){.pp-year-subhead--sample{color:#E8C275}}
+.pp-tool-btn.pp-tool-link{text-decoration:none;display:inline-flex;align-items:center}
 .pp-doc{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;background:transparent;border:0;border-radius:9px;padding:7px 9px;color:var(--text);font:500 13.5px/1.35 Inter,sans-serif;cursor:pointer}
 .pp-doc:hover{background:var(--hover-overlay)}
 .pp-doc.active{background:var(--overlay-strong);font-weight:600}
@@ -88,7 +92,7 @@
   <div class="wrap reveal">
     <div class="crumbs"><a href="/">Home</a><span>/</span><a href="/vantage-ai">Vantage Plus</a><span>/</span>Past papers</div>
     <h1>QCAA <span class="grad-text">Past Papers</span></h1>
-    <p class="vai-hero-lede">Every external exam for <strong>Mathematical Methods</strong> and <strong>Specialist Mathematics</strong>, 2020–2023 — question books and marking guides, viewable side by side.</p>
+    <p class="vai-hero-lede">Every external exam for <strong>Mathematical Methods</strong> and <strong>Specialist Mathematics</strong>, 2020–2023 — including the <strong>2020 sample external assessments</strong> — question books and marking guides, viewable side by side or as PDF.</p>
   </div>
 </section>
 
@@ -103,6 +107,7 @@
         <div class="pp-toolbar" id="ppToolbar" hidden>
           <h2 id="ppTitle"></h2>
           <span class="pp-count" id="ppCount"></span>
+          <a class="pp-tool-btn pp-tool-link" id="ppPdfBtn" href="#" download hidden>Download PDF</a>
           <button class="pp-tool-btn" id="ppGuideBtn" hidden>Show marking guide</button>
         </div>
         <div class="pp-empty" id="ppEmpty">Pick a paper from the list to start viewing.</div>
@@ -151,17 +156,23 @@
 </footer>
 
 <script src="/assets/main.js?v=theme50"></script>
-<script src="/vantage-ai/past-papers/manifest.js?v=pp1"></script>
+<script src="/vantage-ai/past-papers/manifest.js?v=pp2"></script>
 <script>
 (function(){
   var M = window.PP_MANIFEST;
   if(!M){ return; }
+  var PP_BASE = (function(){
+    var s = document.querySelector('script[src*="manifest.js"]');
+    if(s && s.src){ return s.src.replace(/manifest\.js.*$/, ''); }
+    return '/vantage-ai/past-papers/';
+  })();
   var elSubjects = document.getElementById('ppSubjects');
   var elDocList = document.getElementById('ppDocList');
   var elToolbar = document.getElementById('ppToolbar');
   var elTitle = document.getElementById('ppTitle');
   var elCount = document.getElementById('ppCount');
   var elGuideBtn = document.getElementById('ppGuideBtn');
+  var elPdfBtn = document.getElementById('ppPdfBtn');
   var elEmpty = document.getElementById('ppEmpty');
   var elPanes = document.getElementById('ppPanes');
   var elPagesMain = document.getElementById('ppPagesMain');
@@ -207,6 +218,18 @@
     });
   }
 
+  function appendDocButtons(parent, subjId, docs){
+    docs.forEach(function(d){
+      var b = document.createElement('button');
+      b.className = 'pp-doc' + (state.doc && state.doc.id === d.id ? ' active' : '');
+      var badge = d.kind === 'guide' ? '<span class="pp-badge pp-badge-a">ANSWERS</span>' : '<span class="pp-badge pp-badge-q">PAPER</span>';
+      var label = d.label.replace(/^Sample:\s*/, '');
+      b.innerHTML = '<span>' + badge + label + '</span><span class="pp-pgs">' + d.pages + ' pp</span>';
+      b.onclick = function(){ openDoc(subjId, d, true); };
+      parent.appendChild(b);
+    });
+  }
+
   function renderDocList(){
     var subj = M.subjects.filter(function(s){ return s.id === state.subject; })[0];
     elDocList.innerHTML = '';
@@ -215,16 +238,24 @@
       wrap.className = 'pp-year';
       var head = document.createElement('p');
       head.className = 'pp-year-head';
-      head.textContent = y.year + ' External exam';
+      head.textContent = y.year + ' external exam';
       wrap.appendChild(head);
-      y.docs.forEach(function(d){
-        var b = document.createElement('button');
-        b.className = 'pp-doc' + (state.doc && state.doc.id === d.id ? ' active' : '');
-        var badge = d.kind === 'guide' ? '<span class="pp-badge pp-badge-a">ANSWERS</span>' : '<span class="pp-badge pp-badge-q">PAPER</span>';
-        b.innerHTML = '<span>' + badge + d.label + '</span><span class="pp-pgs">' + d.pages + ' pp</span>';
-        b.onclick = function(){ openDoc(subj.id, d, true); };
-        wrap.appendChild(b);
-      });
+      var official = y.docs.filter(function(d){ return !d.sample; });
+      var sample = y.docs.filter(function(d){ return d.sample; });
+      if(official.length){
+        var subOff = document.createElement('p');
+        subOff.className = 'pp-year-subhead';
+        subOff.textContent = 'Official papers';
+        wrap.appendChild(subOff);
+        appendDocButtons(wrap, subj.id, official);
+      }
+      if(sample.length){
+        var subSm = document.createElement('p');
+        subSm.className = 'pp-year-subhead pp-year-subhead--sample';
+        subSm.textContent = 'Sample external assessment';
+        wrap.appendChild(subSm);
+        appendDocButtons(wrap, subj.id, sample);
+      }
       elDocList.appendChild(wrap);
     });
   }
@@ -236,7 +267,7 @@
       fig.className = 'pp-page';
       fig.style.margin = '0';
       var img = document.createElement('img');
-      img.src = '/vantage-ai/past-papers/img/' + doc.id + '/' + i + '.jpg';
+      img.src = PP_BASE + 'img/' + doc.id + '/' + i + '.jpg';
       img.loading = 'lazy';
       img.decoding = 'async';
       img.alt = doc.label + ' — page ' + i;
@@ -259,6 +290,14 @@
     elToolbar.hidden = false;
     elTitle.textContent = subj.name + ' ' + doc.year + (doc.sample ? ' (Sample)' : '') + ' — ' + doc.label.replace('Sample: ','');
     elCount.textContent = doc.pages + ' pages';
+    if(doc.pdf){
+      elPdfBtn.hidden = false;
+      elPdfBtn.href = PP_BASE + doc.pdf;
+      elPdfBtn.download = doc.id + '.pdf';
+    } else {
+      elPdfBtn.hidden = true;
+      elPdfBtn.removeAttribute('href');
+    }
     renderPages(elPagesMain, doc);
     closeGuide();
     var guide = doc.kind !== 'guide' ? findGuide(subjId, doc) : null;

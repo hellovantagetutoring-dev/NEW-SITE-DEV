@@ -390,6 +390,7 @@
       'Weekly subject masterclass': 'routeMasterclass',
       'Assignment review': 'routeAssignment'
     };
+    var routePanelIds = ['routeTutoring', 'routeMasterclass', 'routeAssignment'];
 
     function isTutoringEnquiry(){
       return !!form.querySelector('input[name="enquiry_type"][value="1-on-1 tutoring"]:checked')
@@ -473,10 +474,12 @@
     }
 
     function setRoute(value){
-      Object.keys(routeMap).forEach(function(key){
-        var panel = document.getElementById(routeMap[key]);
+      var activePanelId = value && routeMap[value] ? routeMap[value] : null;
+
+      routePanelIds.forEach(function(panelId){
+        var panel = document.getElementById(panelId);
         if(!panel) return;
-        var on = !!value && key === value;
+        var on = panelId === activePanelId;
         showPanel(panel, on);
 
         [].forEach.call(panel.querySelectorAll('input, select, textarea'), function(el){

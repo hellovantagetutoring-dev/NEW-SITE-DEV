@@ -7,9 +7,10 @@ vantage-ai/past-papers/index.html.
 
 Output layout (matches the live viewer):
   vantage-ai/past-papers/img/{docId}/{n}.jpg   e.g. img/mm-20-p1-mc/1.jpg
+  vantage-ai/past-papers/pdf/{docId}.pdf       original QCAA PDF (download)
   vantage-ai/past-papers/manifest.js           window.PP_MANIFEST = {...}
 """
-import os, re, json
+import os, re, json, shutil
 import fitz
 
 SRC = {
@@ -85,9 +86,15 @@ for subj in ('mm', 'sm'):
         docs.append(d)
 
     years = {}
+    pdf_dir = os.path.join(OUT, 'pdf')
+    os.makedirs(pdf_dir, exist_ok=True)
     for d in docs:
         out_dir = os.path.join(OUT, 'img', d['id'])
         os.makedirs(out_dir, exist_ok=True)
+        pdf_copy = os.path.join(pdf_dir, d['id'] + '.pdf')
+        if not os.path.exists(pdf_copy):
+            shutil.copy2(d['file'], pdf_copy)
+        d['pdf'] = 'pdf/' + d['id'] + '.pdf'
         pdf = fitz.open(d['file'])
         d['pages'] = len(pdf)
         for i in range(len(pdf)):
@@ -101,7 +108,7 @@ for subj in ('mm', 'sm'):
 
     subjects.append({'id': subj, 'name': SUBJECT_NAMES[subj], 'years': [
         {'year': y, 'docs': [
-            {k: d[k] for k in ('id', 'year', 'sample', 'paper', 'kind', 'label', 'pages')}
+            {k: d[k] for k in ('id', 'year', 'sample', 'paper', 'kind', 'label', 'pages', 'pdf')}
             for d in sorted(years[y], key=sort_key)]}
         for y in sorted(years)]})
 
