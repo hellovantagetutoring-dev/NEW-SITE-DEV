@@ -26,8 +26,8 @@
     /Do not write outside this box\.?/gi,
     /margin trimmed off/gi,
     /_{5,}/g,
-    /—\s*Public use\s*—/gi,
-    /\s*—\s*Public use\s*—\s*/gi,
+    / - \s*Public use\s* - /gi,
+    /\s* - \s*Public use\s* - \s*/gi,
     /\bPublic use\b/gi
   ];
 
@@ -157,7 +157,7 @@
     if(stemMath) text = stemMath.prepareExamStem(text);
     text = repairStemMath(text);
     if(isExamJunk(text) || (stemMath && stemMath.isMathBroken(text))){
-      return '<p class="vai-stem-empty">Question text unavailable  -  try another question.</p>';
+      return '<p class="vai-stem-empty">Question text unavailable - try another question.</p>';
     }
 
     var head = '';

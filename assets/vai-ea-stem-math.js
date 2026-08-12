@@ -30,7 +30,7 @@
 
   function stripExamAnswerLines(s){
     s = s.replace(/_{5,}/g, ' ');
-    s = s.replace(/—\s*Public use\s*—/gi, ' ');
+    s = s.replace(/ - \s*Public use\s* - /gi, ' ');
     s = s.replace(/\bPublic use\b/gi, ' ');
     return s;
   }
@@ -111,7 +111,7 @@
   function expressionToLatex(expr){
     var s = String(expr || '').trim();
     if(!s) return '';
-    s = s.replace(/\u2212/g, '-').replace(/–/g, '-').replace(/−/g, '-');
+    s = s.replace(/\u2212/g, '-').replace(/-/g, '-').replace(/−/g, '-');
     s = s.replace(/\b([fgh])\s*[′']\s*\(\s*x\s*\)/gi, "$1'(x)");
     s = s.replace(/\b([fgh])\s*\(\s*x\s*\)/gi, '$1(x)');
     s = s.replace(/\bcos\s*\(/gi, '\\cos(');
