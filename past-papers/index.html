@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#07070C" media="(prefers-color-scheme: dark)">
-<title>QCAA Past Papers | Maths Methods &amp; Specialist 2020–2023 | Vantage Tutoring</title>
-<meta name="description" content="Browse every QCAA external exam for Mathematical Methods and Specialist Mathematics 2020–2023  -  question books and marking guides, side by side. Free with Vantage Plus.">
+<title>QCAA Past Papers | Maths Methods &amp; Specialist 2020-2023 | Vantage Tutoring</title>
+<meta name="description" content="Browse every QCAA external exam for Mathematical Methods and Specialist Mathematics 2020-2023 - question books and marking guides, side by side. Free with Vantage Plus.">
 <link rel="canonical" href="https://vantagetutoring.com.au/past-papers">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://vantagetutoring.com.au/past-papers">
-<meta property="og:title" content="QCAA Past Papers  -  Methods &amp; Specialist 2020–2023">
+<meta property="og:title" content="QCAA Past Papers - Methods &amp; Specialist 2020-2023">
 <meta property="og:description" content="Every past external exam question book and marking guide, viewable side by side.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/logo.png">
-<link rel="stylesheet" href="/assets/styles.css?v=theme68">
+<link rel="stylesheet" href="/assets/styles.css?v=theme82">
 <style>
 .pp-layout{display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:start}
 .pp-side{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow-y:auto;background:var(--surface);border:1px solid var(--stroke);border-radius:16px;padding:14px}
@@ -92,7 +92,7 @@
   <div class="wrap reveal">
     <div class="crumbs"><a href="/">Home</a><span>/</span><a href="/vantage-ai">Vantage Plus</a><span>/</span>Past papers</div>
     <h1>QCAA <span class="grad-text">Past Papers</span></h1>
-    <p class="vai-hero-lede">Every external exam for <strong>Mathematical Methods</strong> and <strong>Specialist Mathematics</strong>, 2020–2023  -  including the <strong>2020 sample external assessments</strong>  -  question books and marking guides, viewable side by side or as PDF.</p>
+    <p class="vai-hero-lede">Every external exam for <strong>Mathematical Methods</strong> and <strong>Specialist Mathematics</strong>, 2020-2023 - including the <strong>2020 sample external assessments</strong> - question books and marking guides, viewable side by side or as PDF.</p>
   </div>
 </section>
 
@@ -138,7 +138,6 @@
         <a href="/services">Services</a>
         <a href="/tutors">Tutors</a>
         <a href="/rates">Rates</a>
-        <a href="/vantage-ai">Vantage Plus</a>
         <a href="/bring-a-friend">Bring a friend</a>
         <a href="/reviews">Reviews</a>
         <a href="/about">About</a>
@@ -155,7 +154,7 @@
   </div>
 </footer>
 
-<script src="/assets/main.js?v=theme50"></script>
+<script src="/assets/main.js?v=theme61"></script>
 <script>
 (function bootPastPapers(){
   var GH_PAPERS_CDN = 'https://cdn.jsdelivr.net/gh/hellovantagetutoring-dev/NEW-SITE-DEV@cursor/tutor-avail-and-filters/past-papers/';
@@ -304,7 +303,7 @@ window.initPastPapersViewer = function(){
       img.src = PP_BASE + 'img/' + doc.id + '/' + i + '.jpg';
       img.loading = 'lazy';
       img.decoding = 'async';
-      img.alt = doc.label + '  -  page ' + i;
+      img.alt = doc.label + ' - page ' + i;
       fig.appendChild(img);
       container.appendChild(fig);
       var num = document.createElement('p');
@@ -322,7 +321,7 @@ window.initPastPapersViewer = function(){
     elEmpty.hidden = true;
     elPanes.hidden = false;
     elToolbar.hidden = false;
-    elTitle.textContent = subj.name + ' ' + doc.year + (doc.sample ? ' (Sample)' : '') + '  -  ' + doc.label.replace('Sample: ','');
+    elTitle.textContent = subj.name + ' ' + doc.year + (doc.sample ? ' (Sample)' : '') + ' - ' + doc.label.replace('Sample: ','');
     elCount.textContent = doc.pages + ' pages';
     if(doc.pdf){
       elPdfBtn.hidden = false;

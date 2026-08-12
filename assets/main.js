@@ -26,27 +26,25 @@
     })();
   }
 
-  // Tutor marquee
+  // Featured tutors marquee (homepage - photo tutors only)
   var marquee=document.getElementById('marquee');
   if(marquee){
     var tutors=[
       {name:'Jason',atar:'99.85',img:'/assets/tutors/jason-liu.jpg'},
       {name:'Yun',atar:'99.90',img:'/assets/tutors/yun-hao.jpg'},
       {name:'Lincoln',atar:'99.80',img:'/assets/tutors/lincoln-murray-brown.jpg'},
+      {name:'Ishaan',atar:'99.90',img:'/assets/tutors/ishaan-tiwari.jpg'},
+      {name:'Jerry',atar:'99.90',img:'/assets/tutors/jerry-zhang.jpg'},
       {name:'Keeran',atar:'99.50',img:'/assets/tutors/keeran-subendranathan.jpg'},
       {name:'Brooklyn',atar:'99.75',img:'/assets/tutors/brooklyn-tran.jpg'},
       {name:'Jize',atar:'99.85',img:'/assets/tutors/jize-peng.jpg'},
-      {name:'Ken',atar:'99.85',init:'KW'},
-      {name:'Crystal',init:'CT'}
+      {name:'Theo',atar:'99.30',img:'/assets/tutors/theo.jpg'},
+      {name:'Ezekiel',atar:'99.85',img:'/assets/tutors/ezekiel-singh.jpg'}
     ];
     var html='';
     for(var i=0;i<tutors.length;i++){
       var t=tutors[i];
-      var av=t.img
-        ? '<img class="chip-av" src="'+t.img+'" alt="" width="40" height="40" loading="eager" decoding="async">'
-        : '<span class="chip-av chip-av--init" aria-hidden="true">'+(t.init||t.name.charAt(0))+'</span>';
-      var score=t.atar ? '<span class="score">'+t.atar+' ATAR</span>' : '';
-      html+='<span class="chip">'+av+'<b>'+t.name+'</b>'+score+'</span>';
+      html+='<a class="chip" href="/tutors"><img class="chip-av" src="'+t.img+'" alt="" width="56" height="56" loading="eager" decoding="async"><b>'+t.name+'</b><span class="score">'+t.atar+' ATAR</span></a>';
     }
     marquee.innerHTML=html+html;
   }
@@ -704,5 +702,138 @@
       if(hide) hide.hidden = !open;
     });
   });
+
+  // Venue + suburb service maps (contact + homepage)
+  var mapNodes=document.querySelectorAll('[data-vt-map]');
+  if(mapNodes.length && typeof L!=='undefined'){
+    var venues=[
+      {id:'slq',name:'State Library of Queensland',detail:'Preferred venue · South Bank',lat:-27.4714,lng:153.0185,query:'State+Library+of+Queensland+South+Bank',tab:'State Library'},
+      {id:'uq',name:'University of Queensland',detail:'St Lucia campus',lat:-27.4975,lng:153.0137,query:'University+of+Queensland+St+Lucia',tab:'UQ St Lucia'},
+      {id:'griffith',name:'Griffith University',detail:'Nathan campus',lat:-27.5537,lng:153.0546,query:'Griffith+University+Nathan',tab:'Griffith University'},
+      {id:'garden',name:'Garden City',detail:'Upper Mount Gravatt',lat:-27.5636,lng:153.0825,query:'Westfield+Garden+City+Upper+Mount+Gravatt',tab:'Garden City'}
+    ];
+    var suburbs=[
+      {name:'Ferny Grove',lat:-27.4028,lng:152.9282,query:'Ferny+Grove+QLD'},
+      {name:'Ashgrove',lat:-27.4456,lng:152.9928,query:'Ashgrove+QLD'},
+      {name:'Indooroopilly',lat:-27.5030,lng:152.9752,query:'Indooroopilly+QLD'},
+      {name:'Mount Ommaney',lat:-27.5491,lng:152.9390,query:'Mount+Ommaney+QLD'},
+      {name:'Carindale',lat:-27.5058,lng:153.1020,query:'Carindale+QLD'},
+      {name:'Robertson',lat:-27.5666,lng:153.0563,query:'Robertson+QLD'},
+      {name:'Rochedale',lat:-27.5702,lng:153.1269,query:'Rochedale+QLD'},
+      {name:'Acacia Ridge',lat:-27.5858,lng:153.0261,query:'Acacia+Ridge+QLD'},
+      {name:'Sunnybank Hills',lat:-27.5955,lng:153.0516,query:'Sunnybank+Hills+QLD'},
+      {name:'Parkinson',lat:-27.6434,lng:153.0301,query:'Parkinson+QLD'},
+      {name:'Browns Plains',lat:-27.6608,lng:153.0417,query:'Browns+Plains+QLD'}
+    ];
+    var lightTiles='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    var darkTiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    var preferDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var tileUrl=preferDark?darkTiles:lightTiles;
+    var suburbList=suburbs.map(function(s){return s.name;}).join(', ');
+    var ferny=null,browns=null;
+    suburbs.forEach(function(s){
+      if(s.name==='Ferny Grove') ferny=s;
+      if(s.name==='Browns Plains') browns=s;
+    });
+    var serviceCenter=L.latLng(
+      (ferny.lat+browns.lat)/2,
+      (ferny.lng+browns.lng)/2
+    );
+    var serviceRadius=serviceCenter.distanceTo(L.latLng(ferny.lat,ferny.lng))+1000;
+
+    [].forEach.call(mapNodes,function(el){
+      var map=L.map(el,{
+        scrollWheelZoom:false,
+        attributionControl:true,
+        zoomControl:true
+      });
+      L.tileLayer(tileUrl,{
+        attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains:'abcd',
+        maxZoom:19
+      }).addTo(map);
+
+      L.circle(serviceCenter,{
+        radius:serviceRadius,
+        color:'#6B4CE0',
+        weight:1.5,
+        opacity:.55,
+        fillColor:'#E8B84B',
+        fillOpacity:.12
+      }).addTo(map).bindPopup('<strong>Home visits</strong><br>Service suburbs across greater Brisbane, including '+suburbList+'.<br>Online available anywhere.');
+
+      var venueIcon=L.divIcon({
+        className:'vt-pin vt-pin--venue',
+        html:'<span></span>',
+        iconSize:[14,14],
+        iconAnchor:[7,7],
+        popupAnchor:[0,-8]
+      });
+      var suburbIcon=L.divIcon({
+        className:'vt-pin vt-pin--suburb',
+        html:'<span></span>',
+        iconSize:[11,11],
+        iconAnchor:[5.5,5.5],
+        popupAnchor:[0,-6]
+      });
+      var bounds=[];
+      var venueMarkers={};
+      venues.forEach(function(v){
+        bounds.push([v.lat,v.lng]);
+        var marker=L.marker([v.lat,v.lng],{icon:venueIcon})
+          .addTo(map)
+          .bindPopup(
+            '<strong>'+v.name+'</strong><br>'+v.detail+
+            '<br><a href="https://www.google.com/maps/search/?api=1&query='+v.query+'" target="_blank" rel="noopener">Open in Google Maps</a>'
+          );
+        venueMarkers[v.id]=marker;
+      });
+      suburbs.forEach(function(s){
+        bounds.push([s.lat,s.lng]);
+        L.marker([s.lat,s.lng],{icon:suburbIcon})
+          .addTo(map)
+          .bindPopup(
+            '<strong>'+s.name+'</strong><br>Home-visit suburb'+
+            '<br><a href="https://www.google.com/maps/search/?api=1&query='+s.query+'" target="_blank" rel="noopener">Open in Google Maps</a>'
+          );
+      });
+      map.fitBounds(bounds,{padding:[24,24],maxZoom:11});
+
+      var wrap=el.closest('[data-vt-map-wrap]');
+      if(wrap){
+        var titleEl=wrap.querySelector('[data-vt-title]');
+        var detailEl=wrap.querySelector('[data-vt-detail]');
+        var linkEl=wrap.querySelector('[data-vt-link]');
+        var tabs=wrap.querySelectorAll('[data-vt-venue]');
+        [].forEach.call(tabs,function(tab){
+          tab.addEventListener('click',function(){
+            var id=tab.getAttribute('data-vt-venue');
+            [].forEach.call(tabs,function(t){
+              t.classList.toggle('is-active',t===tab);
+              t.setAttribute('aria-selected',t===tab?'true':'false');
+            });
+            if(id==='all'){
+              map.fitBounds(bounds,{padding:[28,28],maxZoom:11});
+              if(titleEl) titleEl.textContent='Brisbane service area';
+              if(detailEl) detailEl.textContent='Meet-up venues plus home visits across '+suburbList+'. Online available anywhere.';
+              if(linkEl) linkEl.href='https://www.google.com/maps/search/?api=1&query=Vantage+Tutoring+Brisbane';
+              return;
+            }
+            var v=null;
+            for(var i=0;i<venues.length;i++){ if(venues[i].id===id){ v=venues[i]; break; } }
+            if(!v) return;
+            map.setView([v.lat,v.lng],14,{animate:true});
+            if(venueMarkers[id]) venueMarkers[id].openPopup();
+            if(titleEl) titleEl.textContent=v.name;
+            if(detailEl) detailEl.textContent=v.detail;
+            if(linkEl) linkEl.href='https://www.google.com/maps/search/?api=1&query='+v.query;
+          });
+        });
+      }
+
+      setTimeout(function(){ map.invalidateSize(); },120);
+      window.addEventListener('load',function(){ map.invalidateSize(); });
+    });
+  }
 
 })();
