@@ -1,0 +1,266 @@
+/* Contour-inspired homepage pass - remove this file + body.contour-pass to disable extras.
+   Full file restore: see _preview-backups/contour-pass/REVERT.md */
+
+body.contour-pass{
+  --cp-ink:#14141c;
+  --cp-muted:#5c5c68;
+  --cp-panel:#FFFCF8;
+  --cp-soft:#FEF9F2;
+  --cp-deep:#17151f;
+}
+
+/* Announcement pill */
+body.contour-pass .cp-announce{
+  display:flex;
+  justify-content:center;
+  padding:12px 16px;
+  position:relative;
+  z-index:4;
+  background:var(--cp-soft);
+  border-bottom:1px solid rgba(20,20,28,.06);
+}
+body.contour-pass .cp-announce a{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  max-width:100%;
+  padding:8px 16px;
+  border-radius:999px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.01em;
+  color:#1a1208;
+  text-decoration:none;
+  background:var(--accent-gold);
+  border:1px solid rgba(255,255,255,.35);
+  box-shadow:0 8px 20px -12px rgba(0,0,0,.35);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+body.contour-pass .cp-announce a:hover{
+  transform:translateY(-1px);
+  box-shadow:0 12px 24px -12px rgba(0,0,0,.4);
+}
+body.contour-pass .cp-announce svg{width:14px;height:14px;flex:0 0 auto;}
+
+/* Hero CTAs: Enrol today primary, consultation secondary */
+body.contour-pass .edu-hero .hero-ctas{
+  align-items:center;
+  gap:14px 18px;
+}
+body.contour-pass .edu-hero .hero-ctas .btn-ghost{
+  background:transparent;
+  color:var(--text);
+  border:1px solid var(--stroke-strong);
+}
+
+/* Narrative trust strip */
+body.contour-pass .edu-trust{
+  padding:28px 0 8px;
+}
+body.contour-pass .edu-trust-grid{
+  gap:18px 22px;
+  align-items:start;
+}
+body.contour-pass .edu-trust-item{
+  text-align:center;
+  padding:4px 8px;
+}
+body.contour-pass .edu-trust-item .num{
+  font-size:clamp(28px,3vw,36px);
+  line-height:1;
+  letter-spacing:var(--ls-heading);
+}
+body.contour-pass .edu-trust-item .lbl{
+  margin-top:8px;
+  font-size:12.5px;
+  line-height:1.35;
+  color:var(--cp-muted);
+  font-weight:500;
+  max-width:18ch;
+  margin-left:auto;
+  margin-right:auto;
+  text-align:center;
+}
+
+/* Ecosystem band */
+body.contour-pass .cp-ecosystem{
+  padding:72px 0;
+  background:var(--cp-soft);
+}
+body.contour-pass .cp-ecosystem .section-head{
+  max-width:none;
+  margin-bottom:32px;
+}
+body.contour-pass .cp-eco-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:18px;
+}
+body.contour-pass .cp-eco-card{
+  padding:26px 24px;
+  border-radius:24px;
+  background:var(--cp-panel);
+  border:1px solid rgba(20,20,28,.08);
+  box-shadow:0 16px 36px -28px rgba(18,20,26,.35);
+}
+body.contour-pass .cp-eco-card h3{
+  margin:0 0 8px;
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:var(--ls-tight);
+  color:var(--cp-ink);
+}
+body.contour-pass .cp-eco-card p{
+  margin:0;
+  color:var(--cp-muted);
+  font-size:14.5px;
+  line-height:1.5;
+}
+
+/* Pathway offering cards */
+body.contour-pass .cp-offerings{
+  padding:72px 0 64px;
+}
+body.contour-pass .cp-offer-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:18px;
+}
+body.contour-pass .cp-offer{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  min-height:280px;
+  padding:28px 26px;
+  border-radius:28px;
+  color:inherit;
+  text-decoration:none;
+  background:var(--bg-surface);
+  border:1px solid rgba(20,20,28,.09);
+  box-shadow:0 18px 40px -30px rgba(18,20,26,.4);
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+body.contour-pass .cp-offer:hover{
+  transform:translateY(-3px);
+  border-color:rgba(18,38,74,.18);
+  box-shadow:0 14px 32px -22px rgba(40,28,12,.12);
+}
+body.contour-pass .cp-offer-kicker{
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  background:none;
+  -webkit-background-clip:border-box;
+  background-clip:border-box;
+  color:var(--bg-navy);
+  -webkit-text-fill-color:var(--bg-navy);
+}
+body.contour-pass .cp-offer h3{
+  margin:0;
+  font-size:clamp(24px,2.4vw,30px);
+  font-weight:800;
+  letter-spacing:var(--ls-heading);
+  line-height:1.1;
+  color:var(--cp-ink);
+}
+body.contour-pass .cp-offer p{
+  margin:0;
+  color:var(--cp-muted);
+  font-size:15px;
+  line-height:1.5;
+  flex:1;
+}
+body.contour-pass .cp-offer .card-link{margin-top:auto;}
+
+/* Hide older thin services row when offerings present */
+body.contour-pass #services{display:none;}
+
+/* Dark progress band */
+body.contour-pass .cp-progress{
+  padding:78px 0;
+  background:var(--bg-navy);
+  color:#fff;
+}
+body.contour-pass .cp-progress .section-head{
+  max-width:none;
+  margin-bottom:34px;
+}
+body.contour-pass .cp-progress .section-head h2{
+  color:#fff;
+}
+body.contour-pass .cp-progress .section-head p{
+  color:rgba(255,255,255,.72);
+}
+body.contour-pass .cp-progress-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:18px;
+}
+body.contour-pass .cp-progress-item{
+  padding:22px 20px;
+  border-radius:22px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+}
+body.contour-pass .cp-progress-item .sv-num{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:clamp(36px,4vw,48px);
+  font-weight:800;
+  line-height:1;
+  letter-spacing:var(--ls-heading);
+  background:none;
+  -webkit-background-clip:border-box;
+  background-clip:border-box;
+  color:var(--accent-gold);
+  -webkit-text-fill-color:var(--accent-gold);
+  margin-bottom:10px;
+}
+body.contour-pass .cp-progress-item p{
+  margin:0;
+  color:rgba(255,255,255,.78);
+  font-size:14.5px;
+  line-height:1.45;
+}
+
+
+
+/* Sticky mobile CTA - hidden */
+body.contour-pass .cp-sticky-cta{
+  display:none !important;
+}
+
+@media (max-width:720px){
+  body.contour-pass .cp-announce{padding-top:8px;}
+  body.contour-pass .cp-announce a{font-size:12px;padding:7px 12px;}
+  body.contour-pass .edu-hero .hero-ctas{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+  }
+  body.contour-pass .edu-trust-grid{grid-template-columns:1fr 1fr;gap:10px;}
+  body.contour-pass .edu-trust-item{
+    text-align:center;
+    padding:14px 12px 12px;
+  }
+  body.contour-pass .edu-trust-item .num{font-size:26px;}
+  body.contour-pass .edu-trust-item .lbl{
+    max-width:14ch;
+    margin-top:8px;
+    font-size:12px;
+    line-height:1.35;
+    text-align:center;
+  }
+  body.contour-pass .cp-eco-grid,
+  body.contour-pass .cp-offer-grid,
+  body.contour-pass .cp-progress-grid{grid-template-columns:1fr;}
+  body.contour-pass .cp-offer{min-height:0;}
+}
+
+@media (max-width:980px) and (min-width:721px){
+  body.contour-pass .cp-eco-grid,
+  body.contour-pass .cp-offer-grid{grid-template-columns:1fr 1fr;}
+  body.contour-pass .cp-offer-grid .cp-offer:last-child{grid-column:1 / -1;}
+  body.contour-pass .cp-progress-grid{grid-template-columns:1fr;}
+}

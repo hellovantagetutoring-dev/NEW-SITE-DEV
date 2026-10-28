@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="zh-Hans" class="lang-zh">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0; url=/ch/rates/">
+  <link rel="canonical" href="https://vantagetutoring.com.au/ch/rates/">
+  <title>正在跳转… | 费用 | Vantage Tutoring</title>
+  <script>
+    (function(){
+      var h = (location.hash || '').replace(/^#/, '');
+      var map = { senior:'private', 'private-tutoring':'private', masterclasses:'masterclass', 'ucat-masterclasses':'medprep', ucat:'medprep' };
+      var program = map[h] || h;
+      var valid = { private:1, masterclass:1, medprep:1 };
+      location.replace('/ch/rates/' + (valid[program] ? ('?program=' + encodeURIComponent(program)) : ''));
+    })();
+  </script>
+</head>
+<body>
+  <p>正在跳转到 <a href="/ch/rates/">费用页面</a>…</p>
+</body>
+</html>

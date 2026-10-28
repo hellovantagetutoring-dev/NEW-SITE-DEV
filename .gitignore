@@ -2,3 +2,9 @@
 new site dev 2/
 
 .DS_Store
+
+# Portal (Next.js)
+portal/node_modules/
+portal/.next/
+portal/.env.local
+portal/.env*.local

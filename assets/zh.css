@@ -1,0 +1,100 @@
+/* Chinese (Simplified) site typography & spacing under /ch/ */
+html.lang-zh{
+  --font-sans:"Plus Jakarta Sans","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-serif:"Instrument Serif","Noto Serif SC","Songti SC","SimSun",serif;
+  -webkit-locale:"zh-Hans";
+}
+html.lang-zh body{
+  font-feature-settings:"kern" 1;
+  text-rendering:optimizeLegibility;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  line-break:strict;
+}
+html.lang-zh h1,
+html.lang-zh h2,
+html.lang-zh h3,
+html.lang-zh h4,
+html.lang-zh .hero-headline,
+html.lang-zh .tutor-name,
+html.lang-zh .tier-name,
+html.lang-zh .a-num,
+html.lang-zh .edu-trust-item .num{
+  letter-spacing:0.02em;
+  line-height:1.35;
+}
+/* Hero: CJK letter-spacing + wipe clip was cropping the last characters */
+html.lang-zh .page-home-edu .edu-hero .hero-headline,
+html.lang-zh .page-home-edu .edu-hero .hero-power-item,
+html.lang-zh .page-home-edu .edu-hero .type-wrap{
+  letter-spacing:0.01em;
+}
+html.lang-zh .page-home-edu .edu-hero .hero-rest-shell{
+  overflow:visible;
+}
+html.lang-zh .page-home-edu .edu-hero .type-wrap{
+  padding-right:0.2em;
+  box-decoration-break:clone;
+  -webkit-box-decoration-break:clone;
+}
+html.lang-zh .page-home-edu .edu-hero .hero-rest-shell.is-in .type-wrap{
+  clip-path:inset(-0.12em -0.2em -0.22em 0);
+  -webkit-clip-path:inset(-0.12em -0.2em -0.22em 0);
+}
+html.lang-zh .page-hero h1 .grad-text,
+html.lang-zh .section-head h2 .grad-text{
+  /* avoid "与 收费" style gaps from HTML whitespace before gold spans */
+  margin-left:0;
+}
+html.lang-zh p,
+html.lang-zh .lede,
+html.lang-zh .tier-desc,
+html.lang-zh .tutor-degree,
+html.lang-zh .tutor-school,
+html.lang-zh .faq-a p,
+html.lang-zh .fit-guarantee-copy p,
+html.lang-zh .vt-pillar-copy,
+html.lang-zh .edu-subject-chip,
+html.lang-zh li{
+  letter-spacing:0.04em;
+  line-height:1.75;
+}
+html.lang-zh .navlinks .link,
+html.lang-zh .footer-links a,
+html.lang-zh .btn,
+html.lang-zh .rates-format-btn,
+html.lang-zh .lang-format-btn,
+html.lang-zh .filter-chip,
+html.lang-zh .choice span,
+html.lang-zh .tier-badge{
+  letter-spacing:0.06em;
+}
+/* Keep marketed English terms from looking cramped inside Chinese copy */
+html.lang-zh .tier-name,
+html.lang-zh .tutor-tier,
+html.lang-zh .shine-gold,
+html.lang-zh .shine-platinum,
+html.lang-zh .tier-choice-name{
+  letter-spacing:0.01em;
+  font-family:var(--font-sans);
+}
+html.lang-zh .page-hero h1,
+html.lang-zh .section-head h2{
+  max-width:22em;
+}
+html.lang-zh .crumbs{
+  letter-spacing:0.08em;
+}
+html.lang-zh .footer-bottom{
+  letter-spacing:0.06em;
+}
+/* Slightly roomier Chinese paragraphs in dense cards */
+html.lang-zh .tier-card p,
+html.lang-zh .tutor-hobbies p,
+html.lang-zh .fit-guarantee-copy p{
+  line-height:1.8;
+}
+@media (max-width:720px){
+  html.lang-zh h1{font-size:clamp(1.85rem,7vw,2.4rem);}
+  html.lang-zh .lede{font-size:15.5px;line-height:1.7;}
+}
