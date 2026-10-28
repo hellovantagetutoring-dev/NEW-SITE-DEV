@@ -4,47 +4,64 @@ import type { Profile } from "@/lib/types";
 export function AppShell({
   profile,
   active,
+  mode = "default",
   children,
 }: {
   profile: Profile;
   active?: "dashboard" | "calendar" | "admin";
-  // dashboard = classes for students/admin, or 1-1 students for tutors
+  mode?: "default" | "workspace";
   children: React.ReactNode;
 }) {
+  const workspace = mode === "workspace";
+
   return (
-    <div className="shell">
-      <header className="topbar">
-        <Link href="/app" className="brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="" width={28} height={28} />
-          <span>Vantage Tutoring</span>
-        </Link>
-        <nav className="nav-links">
-          <Link href="/app" data-active={active === "dashboard"}>
-            {profile.role === "tutor" ? "My students" : "Classes"}
+    <div className={`app-frame tech-stage${workspace ? " app-frame-workspace" : ""}`}>
+      <div className={workspace ? "shell shell-wide" : "shell"}>
+        <header className="topbar">
+          <Link href="/app" className="brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="" className="logo" width={34} height={28} />
+            <span>Vantage Tutoring</span>
           </Link>
-          <Link href="/app/calendar" data-active={active === "calendar"}>
-            Calendar
-          </Link>
-          {profile.role === "admin" && (
-            <Link href="/app/admin" data-active={active === "admin"}>
-              Admin
+          <nav className="nav-links">
+            <Link href="/app" data-active={active === "dashboard"}>
+              {profile.role === "tutor" ? "My students" : "Classes"}
             </Link>
-          )}
-          <form action="/auth/signout" method="post">
-            <button type="submit" className="btn btn-ghost" style={{ padding: "0.35rem 0.8rem" }}>
-              Sign out
-            </button>
-          </form>
-        </nav>
-      </header>
-      <p className="muted" style={{ marginTop: "-0.4rem", marginBottom: "1.25rem", fontSize: "0.9rem" }}>
-        Signed in as {profile.full_name || profile.email} · {profile.role}
-      </p>
-      {children}
-      <footer className="muted" style={{ marginTop: "2.5rem", fontSize: "0.82rem" }}>
-        vantagetutoring.com.au · Student Portal
-      </footer>
+            <Link href="/app/calendar" data-active={active === "calendar"}>
+              Calendar
+            </Link>
+            {profile.role === "admin" && (
+              <Link href="/app/admin" data-active={active === "admin"}>
+                Admin
+              </Link>
+            )}
+            <form action="/auth/signout" method="post">
+              <button type="submit" className="btn btn-ghost btn-shell-action">
+                Sign out
+              </button>
+            </form>
+          </nav>
+        </header>
+
+        {!workspace && (
+          <p className="role-chip" style={{ marginBottom: "1.35rem" }}>
+            {profile.full_name || profile.email}
+            <span aria-hidden="true">·</span>
+            <span style={{ textTransform: "capitalize" }}>{profile.role}</span>
+          </p>
+        )}
+
+        {children}
+
+        {!workspace && (
+          <footer className="shell-footer">
+            <span>Student Portal</span>
+            <a href="https://vantagetutoring.com.au" target="_blank" rel="noreferrer">
+              vantagetutoring.com.au
+            </a>
+          </footer>
+        )}
+      </div>
     </div>
   );
 }

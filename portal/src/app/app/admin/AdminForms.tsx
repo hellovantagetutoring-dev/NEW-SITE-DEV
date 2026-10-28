@@ -37,7 +37,15 @@ export function AdminForms({
   return (
     <div style={{ display: "grid", gap: "1.25rem" }}>
       {msg && (
-        <p className="card" style={{ margin: 0, background: "color-mix(in srgb, var(--gold) 12%, white)" }}>
+        <p
+          className="card"
+          style={{
+            margin: 0,
+            background: "color-mix(in srgb, var(--gold-btn) 28%, white)",
+            color: "var(--bg-navy)",
+            fontWeight: 600,
+          }}
+        >
           {msg}
         </p>
       )}
@@ -69,7 +77,7 @@ export function AdminForms({
           </label>
           <label className="field">
             Name
-            <input name="name" required placeholder="Methods Unit 3&4 — Thu" />
+            <input name="name" required placeholder="Methods Unit 3&4, Thu" />
           </label>
           <label className="field">
             Subject
@@ -113,7 +121,7 @@ export function AdminForms({
         >
           <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Link private 1-on-1 (tutor ↔ student)</h2>
           <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
-            Tutors only organise sessions for these students — they cannot upload or release PDFs.
+            Tutors only organise sessions for these students. They cannot upload or release PDFs.
           </p>
           <label className="field">
             Tutor email

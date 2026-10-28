@@ -20,7 +20,7 @@ The portal code lives in `portal/`. Finish these steps so auth and downloads wor
 1. Supabase → **Storage** → New bucket.
 2. Name: `class-resources`
 3. **Private** (not public).
-4. (Optional) Add a policy allowing authenticated uploads for admins only — the service role used by the admin API bypasses RLS for uploads.
+4. (Optional) Add a policy allowing authenticated uploads for admins only; the service role used by the admin API bypasses RLS for uploads.
 
 ## 4. Auth providers
 1. Supabase → **Authentication → Providers**.
@@ -29,6 +29,12 @@ The portal code lives in `portal/`. Finish these steps so auth and downloads wor
    - Create OAuth client in [Google Cloud Console](https://console.cloud.google.com/) (free).
    - Authorized redirect URI: `https://YOUR_PROJECT.supabase.co/auth/v1/callback`
    - Paste Client ID + Secret into Supabase Google provider.
+4. Supabase → **Authentication → URL configuration**:
+   - Site URL: your live portal (e.g. `https://vantage-portal-five.vercel.app`)
+   - Redirect allow list must include:
+     - `http://localhost:3000/auth/callback`
+     - `https://vantage-portal-five.vercel.app/auth/callback`
+     - `https://learn.vantagetutoring.com.au/auth/callback` (when HTTPS works)
 
 ## 5. Local env file
 ```bash

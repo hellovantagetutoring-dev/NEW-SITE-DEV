@@ -31,13 +31,13 @@ export async function POST(request: Request) {
 
   if (!tutor) {
     return NextResponse.json(
-      { error: "Tutor profile not found — add them first (role Tutor) so they can sign in" },
+      { error: "Tutor profile not found. Add them first (role Tutor) so they can sign in" },
       { status: 400 }
     );
   }
   if (!student) {
     return NextResponse.json(
-      { error: "Student profile not found — add them to a class first, or create their login email" },
+      { error: "Student profile not found. Add them to a class first, or create their login email" },
       { status: 400 }
     );
   }

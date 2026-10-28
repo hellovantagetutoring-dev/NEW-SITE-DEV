@@ -27,10 +27,11 @@ export default async function AdminPage() {
 
   return (
     <AppShell profile={profile} active="admin">
+      <p className="section-kicker">Operations</p>
       <h1 className="section-title">Admin</h1>
       <p className="muted" style={{ marginBottom: "1.25rem" }}>
         Masterclass resources and enrolments are admin-only. Tutors only get private 1-on-1
-        student links for scheduling — they cannot upload or release files.
+        student links for scheduling. They cannot upload or release files.
       </p>
       <AdminForms
         isAdmin={profile.role === "admin"}

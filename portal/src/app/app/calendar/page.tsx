@@ -58,6 +58,7 @@ export default async function CalendarPage() {
 
   return (
     <AppShell profile={profile} active="calendar">
+      <p className="section-kicker">Schedule</p>
       <h1 className="section-title">Upcoming</h1>
       <p className="muted" style={{ marginBottom: "1.25rem" }}>
         Masterclasses and 1-on-1 sessions. New bookings still use your usual booking link; you can
