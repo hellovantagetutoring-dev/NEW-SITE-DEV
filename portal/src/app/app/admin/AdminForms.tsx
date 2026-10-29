@@ -33,7 +33,14 @@ export function AdminForms({
   const [editingPair, setEditingPair] = useState<string | null>(null);
 
   const tutors = profiles.filter((p) => p.role === "tutor" || p.role === "admin");
-  const students = profiles.filter((p) => p.role === "student" || p.role === "admin");
+  const students = profiles.filter(
+    (p) => p.role === "student" || p.role === "admin" || p.role === "unverified"
+  );
+
+  function roleLabel(role: string) {
+    if (role === "unverified") return "(unverified login)";
+    return role;
+  }
 
   async function post(url: string, body: FormData | object) {
     setMsg("");
@@ -276,11 +283,15 @@ export function AdminForms({
           }}
         >
           <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Create class</h2>
+          <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
+            Use <strong>Masterclass</strong> for the shared Resources library (workbooks/mocks).
+            Private 1-on-1 custom homework is uploaded by tutors on the Private tab — not here.
+          </p>
           <label className="field">
             Stream
             <select name="stream" required defaultValue="masterclass">
-              <option value="masterclass">Masterclass</option>
-              <option value="private">Private (shared resources, optional)</option>
+              <option value="masterclass">Masterclass / shared Resources</option>
+              <option value="private">Private (legacy class shell)</option>
             </select>
           </label>
           <label className="field">
@@ -454,7 +465,8 @@ export function AdminForms({
                           </label>
                           <label className="field">
                             Role
-                            <select name="role" defaultValue={p.role}>
+                            <select name="role" defaultValue={p.role === "unverified" ? "unverified" : p.role}>
+                              <option value="unverified">(unverified login)</option>
                               <option value="student">Student</option>
                               <option value="tutor">Tutor</option>
                               <option value="admin">Admin</option>
@@ -479,7 +491,15 @@ export function AdminForms({
                     <tr key={p.id}>
                       <td>{p.full_name || "—"}</td>
                       <td>{p.email}</td>
-                      <td style={{ textTransform: "capitalize" }}>{p.role}</td>
+                      <td
+                        style={{
+                          textTransform: p.role === "unverified" ? "none" : "capitalize",
+                          color: p.role === "unverified" ? "#9a3412" : undefined,
+                          fontWeight: p.role === "unverified" ? 700 : undefined,
+                        }}
+                      >
+                        {roleLabel(p.role)}
+                      </td>
                       <td style={{ whiteSpace: "nowrap" }}>
                         <button
                           type="button"

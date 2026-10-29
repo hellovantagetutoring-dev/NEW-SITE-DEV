@@ -41,12 +41,19 @@ export async function POST(request: Request) {
   }
 
   const { data: tutor } = await service.from("profiles").select("id, role, email").eq("id", tutorId).maybeSingle();
-  const { data: student } = await service.from("profiles").select("id, email").eq("id", studentId).maybeSingle();
+  const { data: student } = await service
+    .from("profiles")
+    .select("id, email, role")
+    .eq("id", studentId)
+    .maybeSingle();
   if (!tutor || !student) {
     return NextResponse.json({ error: "Tutor or student not found" }, { status: 400 });
   }
-  if (tutor.role === "student") {
+  if (tutor.role === "student" || tutor.role === "unverified") {
     await service.from("profiles").update({ role: "tutor" }).eq("id", tutor.id);
+  }
+  if (student.role === "unverified") {
+    await service.from("profiles").update({ role: "student" }).eq("id", student.id);
   }
 
   const { error } = await service.from("private_assignments").upsert({

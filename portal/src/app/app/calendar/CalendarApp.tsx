@@ -452,7 +452,7 @@ export function CalendarApp({
                 selected.tutor_id === profileId ||
                 role === "admin") && (
                 <button type="button" className="btn btn-ghost" onClick={() => setRescheduleFor(selected.id)}>
-                  Request change
+                  Request reschedule
                 </button>
               )}
             {canEdit && (role === "admin" || selected.tutor_id === profileId) && (

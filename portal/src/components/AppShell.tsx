@@ -37,7 +37,7 @@ export function AppShell({
           </Link>
           <nav className="nav-links">
             <Link href="/app" prefetch data-active={active === "dashboard"}>
-              <NavLabel>{profile.role === "tutor" ? "My students" : "Classes"}</NavLabel>
+              <NavLabel>Home</NavLabel>
             </Link>
             <Link href="/app/calendar" prefetch data-active={active === "calendar"}>
               <NavLabel>Calendar</NavLabel>

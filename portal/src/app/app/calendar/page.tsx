@@ -24,7 +24,8 @@ export default async function CalendarPage() {
   if (profile.role === "student") {
     query = query.or(`student_id.eq.${profile.id},class_id.not.is.null`);
   } else if (profile.role === "tutor") {
-    query = query.eq("tutor_id", profile.id);
+    // Private sessions they teach + any class-linked (masterclass) rows; filtered below
+    query = query.or(`tutor_id.eq.${profile.id},class_id.not.is.null`);
   }
 
   const { data: sessions } = await query;
@@ -39,6 +40,17 @@ export default async function CalendarPage() {
     visible = visible.filter(
       (s) =>
         s.student_id === profile.id ||
+        (s.type === "masterclass" && s.class_id && classIds.has(s.class_id))
+    );
+  } else if (profile.role === "tutor") {
+    const { data: tutored } = await supabase
+      .from("class_tutors")
+      .select("class_id")
+      .eq("profile_id", profile.id);
+    const classIds = new Set((tutored || []).map((t) => t.class_id));
+    visible = visible.filter(
+      (s) =>
+        s.tutor_id === profile.id ||
         (s.type === "masterclass" && s.class_id && classIds.has(s.class_id))
     );
   }
@@ -64,10 +76,21 @@ export default async function CalendarPage() {
     };
   });
 
-  const { data: classes } =
-    profile.role === "admin"
-      ? await supabase.from("classes").select("id, name").order("name")
-      : { data: [] as { id: string; name: string }[] };
+  let classes: { id: string; name: string }[] = [];
+  if (profile.role === "admin") {
+    const { data } = await supabase.from("classes").select("id, name").order("name");
+    classes = data || [];
+  } else if (profile.role === "tutor") {
+    const { data: links } = await supabase
+      .from("class_tutors")
+      .select("class_id")
+      .eq("profile_id", profile.id);
+    const ids = (links || []).map((l) => l.class_id);
+    if (ids.length) {
+      const { data } = await supabase.from("classes").select("id, name").in("id", ids).order("name");
+      classes = data || [];
+    }
+  }
 
   const { data: requests } = await supabase
     .from("reschedule_requests")
@@ -127,7 +150,7 @@ export default async function CalendarPage() {
         profileId={profile.id}
         sessions={visible}
         pairs={pairs}
-        classes={classes || []}
+        classes={classes}
         requests={enrichedRequests}
         feedUrl={feedUrl}
       />

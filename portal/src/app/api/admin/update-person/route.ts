@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   const fullName = String(body.fullName ?? "").trim();
   const role = String(body.role || "").trim();
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-  if (!["student", "tutor", "admin"].includes(role)) {
+  if (!["student", "tutor", "admin", "unverified"].includes(role)) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 

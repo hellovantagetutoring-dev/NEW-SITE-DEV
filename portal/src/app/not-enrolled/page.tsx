@@ -30,7 +30,8 @@ export default function NotEnrolledPage() {
             </div>
             <h1 className="auth-title auth-title-center">Not enrolled yet</h1>
             <p className="auth-lead auth-lead-center">
-              This email is not on a Vantage class list. Contact us and we will add you.
+              This email is not on a Vantage class list, so the login stays unverified. Contact us and
+              we will add you.
             </p>
             <a href="mailto:hello@vantagetutoring.com.au" className="btn btn-primary btn-block">
               Email enrolment

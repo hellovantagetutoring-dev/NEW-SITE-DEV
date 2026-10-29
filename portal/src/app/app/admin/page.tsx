@@ -14,11 +14,18 @@ export default async function AdminPage() {
     .select("id, name, subject, unit_band")
     .order("name");
 
-  const { data: profiles } = await supabase
+  const { data: profilesRaw } = await supabase
     .from("profiles")
     .select("id, email, full_name, role")
     .order("email")
     .limit(200);
+  // Surface unverified (cold / unauthorised) logins first for Admin review
+  const profiles = [...(profilesRaw || [])].sort((a, b) => {
+    const au = a.role === "unverified" ? 0 : 1;
+    const bu = b.role === "unverified" ? 0 : 1;
+    if (au !== bu) return au - bu;
+    return a.email.localeCompare(b.email);
+  });
 
   const { data: pairsRaw } = await supabase
     .from("private_assignments")

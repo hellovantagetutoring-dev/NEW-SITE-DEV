@@ -18,6 +18,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login`);
   }
 
+  const service = createServiceClient();
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, role, email")
@@ -30,21 +31,41 @@ export async function GET(request: Request) {
     .filter(Boolean);
   const isAdminEmail = admins.includes(user.email.toLowerCase());
 
-  if (profile?.role === "admin" || profile?.role === "tutor" || isAdminEmail) {
-    if (isAdminEmail && profile && profile.role !== "admin") {
-      const service = createServiceClient();
+  if (isAdminEmail) {
+    if (profile && profile.role !== "admin") {
       await service.from("profiles").update({ role: "admin" }).eq("id", user.id);
     }
     return NextResponse.redirect(`${origin}/app`);
   }
 
-  const { count } = await supabase
+  if (profile?.role === "admin" || profile?.role === "tutor") {
+    return NextResponse.redirect(`${origin}/app`);
+  }
+
+  const { count: enrolCount } = await supabase
     .from("enrolments")
     .select("*", { count: "exact", head: true })
     .eq("profile_id", user.id);
 
-  if (!count) {
+  const { count: privateCount } = await supabase
+    .from("private_assignments")
+    .select("*", { count: "exact", head: true })
+    .eq("student_id", user.id);
+
+  const authorised = (enrolCount || 0) > 0 || (privateCount || 0) > 0;
+
+  if (!authorised) {
+    // Mark cold / unauthorised sign-ins so Admin can see them as unverified logins
+    await service
+      .from("profiles")
+      .update({ role: "unverified", last_sign_in_at: new Date().toISOString() })
+      .eq("id", user.id);
     return NextResponse.redirect(`${origin}/not-enrolled`);
+  }
+
+  // Known student who was previously unverified
+  if (profile?.role === "unverified") {
+    await service.from("profiles").update({ role: "student" }).eq("id", user.id);
   }
 
   return NextResponse.redirect(`${origin}/app`);
