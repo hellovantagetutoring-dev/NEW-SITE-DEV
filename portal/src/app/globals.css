@@ -1706,17 +1706,33 @@ button:disabled,
   gap: 0.28rem;
 }
 
-.cal-today-dot {
-  width: 0.45rem;
-  height: 0.45rem;
+.cal-day-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.55rem;
+  height: 1.55rem;
+  padding: 0 0.2rem;
   border-radius: 999px;
-  background: #d Damon2b;
-  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.cal-cell.is-today .cal-cell-day,
-.cal-week-col.is-today .cal-week-head {
+.cal-day-num.is-today {
+  background: #e11d2e;
+  color: #fff;
   font-weight: 800;
+  box-shadow: 0 0 0 2px rgba(225, 29, 46, 0.22);
+}
+
+.cal-cell.is-today {
+  background: rgba(225, 29, 46, 0.04);
+}
+
+.cal-week-col.is-today {
+  outline: 2px solid rgba(225, 29, 46, 0.35);
+  outline-offset: -2px;
 }
 
 .cal-week-wrap {
@@ -1753,5 +1769,100 @@ button:disabled,
   .cal-week-gutter {
     font-size: 0.6rem;
     padding: 0.25rem 0.15rem;
+  }
+}
+
+/* Contour-style PDF preview */
+.pdf-preview {
+  display: grid;
+  gap: 0;
+  border: 1px solid rgba(18, 38, 74, 0.12);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #eef1f5;
+  min-height: min(72vh, 820px);
+}
+
+.pdf-preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  padding: 0.55rem 0.75rem;
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid rgba(18, 38, 74, 0.1);
+}
+
+.pdf-preview-label {
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: var(--bg-navy);
+}
+
+.pdf-preview-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.75rem;
+}
+
+.pdf-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.pdf-zoom input[type="range"] {
+  width: 7rem;
+}
+
+.pdf-preview-stage {
+  overflow: auto;
+  height: min(68vh, 760px);
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.pdf-preview-stage.is-fit .pdf-preview-frame-wrap {
+  width: 100% !important;
+  max-width: 920px;
+}
+
+.pdf-preview-frame-wrap {
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(18, 38, 74, 0.12);
+  border-radius: 4px;
+  overflow: hidden;
+  min-height: 100%;
+}
+
+.pdf-preview-frame {
+  display: block;
+  width: 100%;
+  height: min(66vh, 740px);
+  border: 0;
+  background: #fff;
+}
+
+.pdf-preview-fallback {
+  display: grid;
+  gap: 0.85rem;
+  place-items: start;
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 10px;
+}
+
+@media (max-width: 900px) {
+  .pdf-preview,
+  .pdf-preview-stage,
+  .pdf-preview-frame {
+    min-height: 55vh;
+    height: 55vh;
   }
 }

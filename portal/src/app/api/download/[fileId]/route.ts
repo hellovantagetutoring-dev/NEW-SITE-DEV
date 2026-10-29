@@ -6,10 +6,11 @@ import { stampPdf } from "@/lib/watermark";
 export const runtime = "nodejs";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ fileId: string }> }
 ) {
   const { fileId } = await context.params;
+  const inline = new URL(request.url).searchParams.get("inline") === "1";
   const profile = await getProfile();
   if (!profile) {
     return NextResponse.json({ error: "Sign in required" }, { status: 401 });
@@ -81,8 +82,11 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
+      "Content-Disposition": inline
+        ? `inline; filename="${filename}"`
+        : `attachment; filename="${filename}"`,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

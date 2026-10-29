@@ -116,10 +116,12 @@ export default async function CalendarPage() {
     <>
       <p className="section-kicker">Schedule</p>
       <h1 className="section-title">Calendar</h1>
-      <p className="muted" style={{ marginBottom: "1.15rem" }}>
-        Month and week views in Brisbane time. Generate a QLD term for a tutoring pair, request changes
-        with real times, and subscribe in Google/Apple Calendar.
-      </p>
+      {profile.role !== "student" && (
+        <p className="muted" style={{ marginBottom: "1.15rem" }}>
+          Month and week views in Brisbane time. Set a recurring schedule for a tutoring pair, request
+          changes with real times, and subscribe in Google/Apple Calendar.
+        </p>
+      )}
       <CalendarApp
         role={profile.role}
         profileId={profile.id}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { PdfPreview } from "@/components/PdfPreview";
 import { ReleaseSolutionsButton } from "./ReleaseSolutionsButton";
 
 type ResourceSet = {
@@ -69,7 +70,8 @@ export function ClassWorkspace({
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
     const start: Record<string, boolean> = {};
     for (const section of sections) {
-      start[section.key] = section.sets.some((s) => s.id === initialSetId) || section.key === sections[0]?.key;
+      start[section.key] =
+        section.sets.some((s) => s.id === initialSetId) || section.key === sections[0]?.key;
     }
     return start;
   });
@@ -83,9 +85,11 @@ export function ClassWorkspace({
   const [activeKind, setActiveKind] = useState(visibleKinds[0]?.kind || "workbook");
 
   const activeFile =
-    setFiles.find((f) => f.kind === activeKind) ||
-    visibleKinds[0] ||
-    null;
+    setFiles.find((f) => f.kind === activeKind) || visibleKinds[0] || null;
+
+  const canOpenFile =
+    !!activeFile &&
+    !(activeFile.kind === "solutions" && !activeFile.solutions_released_at && !canRelease);
 
   const sectionLabel = activeSet ? SECTION_LABELS[activeSet.section] || activeSet.section : "";
 
@@ -93,7 +97,9 @@ export function ClassWorkspace({
     setActiveSetId(setId);
     setOpenSections((prev) => ({ ...prev, [sectionKey]: true }));
     const kinds = files.filter((f) => f.set_id === setId);
-    const first = kinds.find((f) => f.kind !== "solutions" || f.solutions_released_at || canRelease);
+    const first = kinds.find(
+      (f) => f.kind !== "solutions" || f.solutions_released_at || canRelease
+    );
     if (first) setActiveKind(first.kind);
   }
 
@@ -127,9 +133,7 @@ export function ClassWorkspace({
                   }
                 >
                   <span>{section.label}</span>
-                  <span className="workspace-count">
-                    {section.sets.length}
-                  </span>
+                  <span className="workspace-count">{section.sets.length}</span>
                 </button>
                 {open && (
                   <ul className="workspace-set-list">
@@ -210,20 +214,15 @@ export function ClassWorkspace({
               </div>
 
               <div className="workspace-toolbar-actions">
-                {activeFile &&
-                  !(
-                    activeFile.kind === "solutions" &&
-                    !activeFile.solutions_released_at &&
-                    !canRelease
-                  ) && (
-                    <a
-                      className="btn btn-primary"
-                      href={`/api/download/${activeFile.id}`}
-                      style={{ padding: "0.5rem 1rem", fontSize: "0.88rem" }}
-                    >
-                      Download
-                    </a>
-                  )}
+                {canOpenFile && (
+                  <a
+                    className="btn btn-primary"
+                    href={`/api/download/${activeFile!.id}`}
+                    style={{ padding: "0.5rem 1rem", fontSize: "0.88rem" }}
+                  >
+                    Download {KIND_LABELS[activeFile!.kind] || activeFile!.kind}
+                  </a>
+                )}
                 {canRelease &&
                   setFiles
                     .filter((f) => f.kind === "solutions" && !f.solutions_released_at)
@@ -232,39 +231,26 @@ export function ClassWorkspace({
             </div>
 
             <div className="workspace-viewer">
-              <div className="workspace-viewer-card">
-                <p className="section-kicker">{sectionLabel}</p>
-                <h2 className="workspace-viewer-title">
-                  {activeSet.code} · {activeSet.title}
-                </h2>
-                <p className="muted" style={{ margin: "0.35rem 0 1.25rem", lineHeight: 1.5 }}>
-                  {activeFile
-                    ? activeFile.kind === "solutions" && !activeFile.solutions_released_at
-                      ? "Solutions are uploaded but not released to students yet."
-                      : `Selected: ${KIND_LABELS[activeFile.kind] || activeFile.kind}. Download opens a personalised PDF for your account.`
-                    : "Pick a tab above once files are available."}
-                </p>
-
-                {activeFile &&
-                  !(
-                    activeFile.kind === "solutions" &&
-                    !activeFile.solutions_released_at &&
-                    !canRelease
-                  ) && (
-                    <a className="btn btn-primary" href={`/api/download/${activeFile.id}`}>
-                      Download {KIND_LABELS[activeFile.kind] || activeFile.kind}
-                      <span aria-hidden="true">→</span>
-                    </a>
-                  )}
-
-                {activeFile?.kind === "solutions" &&
-                  !activeFile.solutions_released_at &&
-                  !canRelease && (
+              {canOpenFile ? (
+                <PdfPreview
+                  fileId={activeFile!.id}
+                  label={KIND_LABELS[activeFile!.kind] || activeFile!.kind}
+                />
+              ) : (
+                <div className="workspace-viewer-card">
+                  <p className="section-kicker">{sectionLabel}</p>
+                  <h2 className="workspace-viewer-title">
+                    {activeSet.code} · {activeSet.title}
+                  </h2>
+                  {activeFile?.kind === "solutions" && !activeFile.solutions_released_at ? (
                     <p className="auth-status" style={{ textAlign: "left" }}>
                       Solutions locked until your teacher releases them.
                     </p>
+                  ) : (
+                    <p className="muted">Pick a set with files to preview the workbook here.</p>
                   )}
-              </div>
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -285,7 +271,6 @@ export function ClassWorkspace({
           </div>
         )}
       </section>
-      {/* keep classId referenced for future deep links */}
       <span hidden>{classId}</span>
     </div>
   );

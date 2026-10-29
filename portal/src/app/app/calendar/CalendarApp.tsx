@@ -208,7 +208,20 @@ export function CalendarApp({
     setMsg("Opening calendar subscribe… if nothing opens, the link was copied");
   }
 
-  const todayYmd = ymdInBrisbane(new Date());
+  // Same YMD encoding as month/week cells (Brisbane civil date as UTC Y-M-D parts)
+  const todayYmd = useMemo(() => {
+    const parts = new Intl.DateTimeFormat("en-AU", {
+      timeZone: TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const y = parts.find((p) => p.type === "year")?.value || "0000";
+    const m = parts.find((p) => p.type === "month")?.value || "01";
+    const d = parts.find((p) => p.type === "day")?.value || "01";
+    return `${y}-${m}-${d}`;
+  }, []);
+
   const pendingRequests = requests.filter((r) => r.status === "pending");
 
   const monthRows = useMemo(() => {
@@ -321,8 +334,9 @@ export function CalendarApp({
                           data-kind={kind}
                         >
                           <div className="cal-cell-day">
-                            {isToday && <span className="cal-today-dot" aria-hidden="true" />}
-                            {Number(ymd.slice(-2))}
+                            <span className={`cal-day-num${isToday ? " is-today" : ""}`}>
+                              {Number(ymd.slice(-2))}
+                            </span>
                           </div>
                           <div className="cal-cell-events">
                             {daySessions.slice(0, 3).map((s) => (
@@ -371,8 +385,10 @@ export function CalendarApp({
                   data-kind={kind}
                 >
                   <div className="cal-week-head">
-                    {isToday && <span className="cal-today-dot" aria-hidden="true" />}
-                    {formatDayLabel(ymd)}
+                    <span className={`cal-day-num${isToday ? " is-today" : ""}`} aria-hidden={!isToday}>
+                      {Number(ymd.slice(-2))}
+                    </span>
+                    <span>{formatDayLabel(ymd)}</span>
                   </div>
                   <div className="cal-week-body">
                     {daySessions.map((s) => (
