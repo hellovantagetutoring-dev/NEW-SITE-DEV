@@ -38,10 +38,12 @@ export async function GET(request: Request) {
     role = data.role;
     name = `Vantage · ${data.full_name || data.email}`;
     if (!data.calendar_feed_token) {
-      await service.rpc("ensure_calendar_feed_token", { pid: data.id }).catch(async () => {
-        const tok = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+      const { error: rpcErr } = await service.rpc("ensure_calendar_feed_token", { pid: data.id });
+      if (rpcErr) {
+        const tok =
+          crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
         await service.from("profiles").update({ calendar_feed_token: tok }).eq("id", data.id);
-      });
+      }
     }
   }
 
