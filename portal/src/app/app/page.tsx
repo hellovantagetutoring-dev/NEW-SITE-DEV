@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell } from "@/components/AppShell";
 import { getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardTabs } from "./DashboardTabs";
@@ -20,7 +19,7 @@ export default async function DashboardPage() {
       .eq("tutor_id", profile.id);
 
     return (
-      <AppShell profile={profile} active="dashboard">
+      <>
         <p className="section-kicker">Private tutoring</p>
         <h1 className="section-title">My 1-on-1 students</h1>
         <p className="muted" style={{ marginBottom: "1.25rem" }}>
@@ -64,11 +63,11 @@ export default async function DashboardPage() {
             .filter(Boolean) as { id: string; label: string }[]}
         />
         <p style={{ marginTop: "1.25rem" }}>
-          <Link href="/app/calendar" className="btn btn-ghost">
+          <Link href="/app/calendar" className="btn btn-ghost" prefetch>
             Open calendar
           </Link>
         </p>
-      </AppShell>
+      </>
     );
   }
 
@@ -119,7 +118,7 @@ export default async function DashboardPage() {
   });
 
   return (
-    <AppShell profile={profile} active="dashboard">
+    <>
       <p className="section-kicker">Dashboard</p>
       <h1 className="section-title">Your programs</h1>
       <p className="muted" style={{ marginBottom: "1.15rem" }}>
@@ -137,6 +136,6 @@ export default async function DashboardPage() {
           No classes yet. Create them in Admin.
         </p>
       )}
-    </AppShell>
+    </>
   );
 }

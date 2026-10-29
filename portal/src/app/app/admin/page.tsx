@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AppShell } from "@/components/AppShell";
 import { getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AdminForms } from "./AdminForms";
@@ -26,7 +25,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <AppShell profile={profile} active="admin">
+    <>
       <p className="section-kicker">Operations</p>
       <h1 className="section-title">Admin</h1>
       <p className="muted" style={{ marginBottom: "1.25rem" }}>
@@ -38,6 +37,6 @@ export default async function AdminPage() {
         classes={classes || []}
         profiles={profiles}
       />
-    </AppShell>
+    </>
   );
 }

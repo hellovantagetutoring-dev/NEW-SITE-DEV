@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useLinkStatus } from "next/link";
 import { useState } from "react";
 import { SUBJECT_ACCENT } from "@/lib/types";
+
+function PendingCardLabel({ children }: { children: React.ReactNode }) {
+  const { pending } = useLinkStatus();
+  return <span data-pending={pending || undefined}>{children}</span>;
+}
 
 type ClassCard = {
   id: string;
@@ -68,14 +74,17 @@ export function DashboardTabs({
                 <Link
                   key={c.id}
                   href={`/app/classes/${c.id}`}
-                  className="card"
+                  className="card card-nav"
+                  prefetch
                   style={{ borderTop: `4px solid ${accent}` }}
                 >
-                  <span className="pill">Masterclass</span>
-                  <h3 style={{ margin: "0.65rem 0 0.25rem", fontSize: "1.05rem" }}>{c.name}</h3>
-                  <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-                    {[c.subject, c.unit_band, c.year_label].filter(Boolean).join(" · ")}
-                  </p>
+                  <PendingCardLabel>
+                    <span className="pill">Masterclass</span>
+                    <h3 style={{ margin: "0.65rem 0 0.25rem", fontSize: "1.05rem" }}>{c.name}</h3>
+                    <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+                      {[c.subject, c.unit_band, c.year_label].filter(Boolean).join(" · ")}
+                    </p>
+                  </PendingCardLabel>
                 </Link>
               );
             })}
@@ -93,14 +102,17 @@ export function DashboardTabs({
                 <Link
                   key={c.id}
                   href={`/app/classes/${c.id}`}
-                  className="card"
+                  className="card card-nav"
+                  prefetch
                   style={{ borderTop: `4px solid ${accent}` }}
                 >
-                  <span className="pill">Private</span>
-                  <h3 style={{ margin: "0.65rem 0 0.25rem", fontSize: "1.05rem" }}>{c.name}</h3>
-                  <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-                    {[c.subject, c.unit_band].filter(Boolean).join(" · ")}
-                  </p>
+                  <PendingCardLabel>
+                    <span className="pill">Private</span>
+                    <h3 style={{ margin: "0.65rem 0 0.25rem", fontSize: "1.05rem" }}>{c.name}</h3>
+                    <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+                      {[c.subject, c.unit_band].filter(Boolean).join(" · ")}
+                    </p>
+                  </PendingCardLabel>
                 </Link>
               );
             })}

@@ -385,6 +385,113 @@ button:disabled,
 .app-frame.tech-stage::before {
   opacity: 0.14;
   top: -80vh;
+  /* Static grid in the app — continuous drift makes route swaps feel sticky */
+  animation: none;
+}
+
+.nav-links a [data-pending],
+.card-nav [data-pending] {
+  transition: opacity 0.15s ease;
+}
+
+.nav-links a [data-pending="true"],
+.card-nav [data-pending="true"] {
+  opacity: 0.45;
+}
+
+.route-loading {
+  position: relative;
+  min-height: 12rem;
+  padding-top: 0.35rem;
+}
+
+.route-loading-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 40%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--navy, #12264a), transparent);
+  animation: route-load-slide 0.9s ease-in-out infinite;
+}
+
+@keyframes route-load-slide {
+  0% {
+    transform: translateX(-20%);
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(160%);
+    opacity: 0.35;
+  }
+}
+
+.route-loading-skel {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.85rem;
+}
+
+.skel {
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    rgba(18, 38, 74, 0.06) 0%,
+    rgba(18, 38, 74, 0.11) 50%,
+    rgba(18, 38, 74, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.2s ease-in-out infinite;
+}
+
+.skel-kicker {
+  width: 5.5rem;
+  height: 0.7rem;
+}
+
+.skel-title {
+  width: min(16rem, 70%);
+  height: 1.55rem;
+}
+
+.skel-line {
+  width: min(28rem, 92%);
+  height: 0.85rem;
+}
+
+.skel-line-short {
+  width: min(18rem, 60%);
+}
+
+.skel-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.skel-card {
+  height: 7.5rem;
+}
+
+@keyframes skel-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-bar,
+  .skel {
+    animation: none !important;
+  }
 }
 
 /* Contour-inspired tabs, crumbs, class workspace */

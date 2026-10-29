@@ -1,38 +1,50 @@
+"use client";
+
 import Link from "next/link";
+import { useLinkStatus } from "next/link";
+import { usePathname } from "next/navigation";
 import type { Profile } from "@/lib/types";
+
+function NavLabel({ children }: { children: React.ReactNode }) {
+  const { pending } = useLinkStatus();
+  return <span data-pending={pending || undefined}>{children}</span>;
+}
 
 export function AppShell({
   profile,
-  active,
-  mode = "default",
   children,
 }: {
   profile: Profile;
-  active?: "dashboard" | "calendar" | "admin";
-  mode?: "default" | "workspace";
   children: React.ReactNode;
 }) {
-  const workspace = mode === "workspace";
+  const pathname = usePathname();
+  const workspace = pathname.startsWith("/app/classes/");
+  const active =
+    pathname.startsWith("/app/calendar")
+      ? "calendar"
+      : pathname.startsWith("/app/admin")
+        ? "admin"
+        : "dashboard";
 
   return (
     <div className={`app-frame tech-stage${workspace ? " app-frame-workspace" : ""}`}>
       <div className={workspace ? "shell shell-wide" : "shell"}>
         <header className="topbar">
-          <Link href="/app" className="brand">
+          <Link href="/app" className="brand" prefetch>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="" className="logo" width={34} height={28} />
             <span>Vantage Tutoring</span>
           </Link>
           <nav className="nav-links">
-            <Link href="/app" data-active={active === "dashboard"}>
-              {profile.role === "tutor" ? "My students" : "Classes"}
+            <Link href="/app" prefetch data-active={active === "dashboard"}>
+              <NavLabel>{profile.role === "tutor" ? "My students" : "Classes"}</NavLabel>
             </Link>
-            <Link href="/app/calendar" data-active={active === "calendar"}>
-              Calendar
+            <Link href="/app/calendar" prefetch data-active={active === "calendar"}>
+              <NavLabel>Calendar</NavLabel>
             </Link>
             {profile.role === "admin" && (
-              <Link href="/app/admin" data-active={active === "admin"}>
-                Admin
+              <Link href="/app/admin" prefetch data-active={active === "admin"}>
+                <NavLabel>Admin</NavLabel>
               </Link>
             )}
             <form action="/auth/signout" method="post">
@@ -51,7 +63,7 @@ export function AppShell({
           </p>
         )}
 
-        {children}
+        <div className="app-main">{children}</div>
 
         {!workspace && (
           <footer className="shell-footer">

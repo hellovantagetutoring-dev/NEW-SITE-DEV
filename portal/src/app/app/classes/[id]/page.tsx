@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import { AppShell } from "@/components/AppShell";
 import { getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { ClassWorkspace } from "./ClassWorkspace";
@@ -42,18 +41,16 @@ export default async function ClassPage({
   })[0]?.id;
 
   return (
-    <AppShell profile={profile} active="dashboard" mode="workspace">
-      <ClassWorkspace
-        classId={klass.id}
-        className={klass.name}
-        subject={klass.subject}
-        unitBand={klass.unit_band || ""}
-        yearLabel={klass.year_label || ""}
-        sets={sets || []}
-        files={[...(files || [])]}
-        newestId={newestId}
-        canRelease={profile.role === "admin"}
-      />
-    </AppShell>
+    <ClassWorkspace
+      classId={klass.id}
+      className={klass.name}
+      subject={klass.subject}
+      unitBand={klass.unit_band || ""}
+      yearLabel={klass.year_label || ""}
+      sets={sets || []}
+      files={[...(files || [])]}
+      newestId={newestId}
+      canRelease={profile.role === "admin"}
+    />
   );
 }

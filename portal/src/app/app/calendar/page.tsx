@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AppShell } from "@/components/AppShell";
 import { getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { RescheduleForm } from "./RescheduleForm";
@@ -57,7 +56,7 @@ export default async function CalendarPage() {
           .limit(20);
 
   return (
-    <AppShell profile={profile} active="calendar">
+    <>
       <p className="section-kicker">Schedule</p>
       <h1 className="section-title">Upcoming</h1>
       <p className="muted" style={{ marginBottom: "1.25rem" }}>
@@ -103,6 +102,6 @@ export default async function CalendarPage() {
         ))}
         {!requests?.length && <p className="muted">No requests yet.</p>}
       </div>
-    </AppShell>
+    </>
   );
 }
