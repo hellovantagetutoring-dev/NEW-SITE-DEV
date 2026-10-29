@@ -62,7 +62,68 @@ export async function POST(request: Request) {
       count: planned.length,
       planned,
       skipped,
+      recurring: {
+        weekday,
+        time,
+        durationMinutes,
+        title,
+      },
     });
+  }
+
+  // Upsert the pair/class recurring weekly rule
+  let seriesId: string | null = null;
+  let seriesQuery = supabase
+    .from("session_series")
+    .select("id")
+    .eq("type", type)
+    .eq("active", true)
+    .eq("weekday", weekday);
+
+  if (type === "private" && studentId) {
+    seriesQuery = seriesQuery.eq("tutor_id", tutorId).eq("student_id", studentId);
+  } else if (classId) {
+    seriesQuery = seriesQuery.eq("class_id", classId);
+  }
+
+  const { data: existingSeries } = await seriesQuery.maybeSingle();
+
+  if (existingSeries?.id) {
+    seriesId = existingSeries.id;
+    const { error: upErr } = await supabase
+      .from("session_series")
+      .update({
+        title,
+        weekday,
+        time_local: time,
+        duration_minutes: durationMinutes,
+        location_or_link: locationOrLink,
+        tutor_id: tutorId,
+        student_id: type === "private" ? studentId : null,
+        class_id: type === "masterclass" ? classId : null,
+        active: true,
+      })
+      .eq("id", seriesId);
+    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+  } else {
+    const { data: created, error: cErr } = await supabase
+      .from("session_series")
+      .insert({
+        type,
+        title,
+        weekday,
+        time_local: time,
+        duration_minutes: durationMinutes,
+        location_or_link: locationOrLink,
+        tutor_id: tutorId,
+        student_id: type === "private" ? studentId : null,
+        class_id: type === "masterclass" ? classId : null,
+        active: true,
+      })
+      .select("id")
+      .single();
+    if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 });
+    seriesId = created.id;
   }
 
   let toInsert = planned;
@@ -86,8 +147,10 @@ export async function POST(request: Request) {
 
   if (!toInsert.length) {
     return NextResponse.json({
-      message: "No new sessions to create (all dates skipped or already exist)",
+      message:
+        "Recurring schedule saved for this pair. No new sessions to create (already exist or skipped).",
       created: 0,
+      seriesId,
       skipped,
     });
   }
@@ -101,14 +164,16 @@ export async function POST(request: Request) {
     starts_at: p.startsAt,
     ends_at: p.endsAt,
     location_or_link: locationOrLink,
+    series_id: seriesId,
   }));
 
   const { error } = await supabase.from("sessions").insert(rows);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({
-    message: `Created ${rows.length} sessions for the term`,
+    message: `Saved weekly recurring schedule and created ${rows.length} sessions for the term`,
     created: rows.length,
+    seriesId,
     skipped,
   });
 }

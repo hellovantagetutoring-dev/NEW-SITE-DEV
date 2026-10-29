@@ -137,3 +137,65 @@ export function overlayKindForDay(ymd: string): QldDayKind | "none" {
   if (isQldTermDay(ymd)) return "term";
   return "none";
 }
+
+export function mondayOfWeek(ymd: string): string {
+  const d = parseYmd(ymd);
+  const dow = d.getUTCDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return formatYmd(d);
+}
+
+export type QldWeekInfo = {
+  kind: "term" | "holiday" | "public_holiday" | "none";
+  label: string;
+  shortLabel: string;
+  term?: number;
+  week?: number;
+};
+
+/** QLD school week for the Monday-start week containing `ymd`. */
+export function getQldWeekInfo(ymd: string): QldWeekInfo {
+  const mon = mondayOfWeek(ymd);
+  const fri = formatYmd(new Date(parseYmd(mon).getTime() + 4 * 86400000));
+
+  for (const t of QLD_TERMS) {
+    const termMon = mondayOfWeek(t.start);
+    const termEndMon = mondayOfWeek(t.end);
+    if (mon >= termMon && mon <= termEndMon) {
+      // If this Monday falls in a holiday that interrupts terms, prefer holiday label
+      const closedMon = isQldNonTeachingDay(mon);
+      if (closedMon && closedMon.kind === "holiday") {
+        return {
+          kind: "holiday",
+          label: closedMon.label,
+          shortLabel: "Holidays",
+        };
+      }
+      const week =
+        Math.floor((parseYmd(mon).getTime() - parseYmd(termMon).getTime()) / (7 * 86400000)) + 1;
+      return {
+        kind: "term",
+        term: t.term,
+        week,
+        label: `Term ${t.term} · Week ${week}`,
+        shortLabel: `T${t.term} W${week}`,
+      };
+    }
+  }
+
+  const closed = isQldNonTeachingDay(mon) || isQldNonTeachingDay(fri) || isQldNonTeachingDay(ymd);
+  if (closed) {
+    const short =
+      closed.kind === "public_holiday"
+        ? closed.label
+        : closed.label.replace(/\s+holidays$/i, " hols");
+    return {
+      kind: closed.kind === "public_holiday" ? "public_holiday" : "holiday",
+      label: closed.label,
+      shortLabel: short.length > 14 ? "Holidays" : short,
+    };
+  }
+
+  return { kind: "none", label: "", shortLabel: "" };
+}

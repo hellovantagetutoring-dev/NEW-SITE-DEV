@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { overlayKindForDay, QLD_TERMS } from "@/lib/qld-school-calendar";
+import { getQldWeekInfo, overlayKindForDay, QLD_TERMS } from "@/lib/qld-school-calendar";
 
 export type CalSession = {
   id: string;
@@ -201,16 +201,25 @@ export function CalendarApp({
     setSelectedId(null);
   }
 
-  async function copyFeed() {
-    try {
-      await navigator.clipboard.writeText(feedUrl);
-      setMsg("Calendar subscribe link copied");
-    } catch {
-      setMsg(feedUrl);
-    }
+  function subscribeFeed() {
+    const webcal = feedUrl.replace(/^https:/i, "webcal:").replace(/^http:/i, "webcal:");
+    window.location.href = webcal;
+    navigator.clipboard?.writeText(feedUrl).catch(() => {});
+    setMsg("Opening calendar subscribe… if nothing opens, the link was copied");
   }
 
+  const todayYmd = ymdInBrisbane(new Date());
   const pendingRequests = requests.filter((r) => r.status === "pending");
+
+  const monthRows = useMemo(() => {
+    const rows: string[][] = [];
+    for (let i = 0; i < monthCells.length; i += 7) {
+      rows.push(monthCells.slice(i, i + 7));
+    }
+    return rows;
+  }, [monthCells]);
+
+  const weekInfo = getQldWeekInfo(weekDays[0] || todayYmd);
 
   return (
     <div className="cal-app">
@@ -256,13 +265,13 @@ export function CalendarApp({
           </button>
         </div>
         <div className="cal-actions">
-          <button type="button" className="btn btn-ghost" onClick={copyFeed}>
+          <button type="button" className="btn btn-ghost" onClick={subscribeFeed}>
             Subscribe (iCal)
           </button>
           {canEdit && (
             <>
               <button type="button" className="btn btn-ghost" onClick={() => setShowGenerate(true)}>
-                Generate term
+                Set recurring
               </button>
               <button type="button" className="btn btn-primary" onClick={() => setShowAdd(true)}>
                 Add session
@@ -275,46 +284,66 @@ export function CalendarApp({
       {msg && <p className="cal-msg">{msg}{pending ? "…" : ""}</p>}
 
       <p className="muted cal-legend">
-        Shaded days follow QLD school holidays / public holidays. Term teaching weeks stay clear.
+        QLD school weeks on the left. Shaded = holidays / public holidays. Red dot = today.
       </p>
 
       {view === "month" ? (
         <div className="cal-month">
-          <div className="cal-dow">
+          <div className="cal-dow cal-dow-with-gutter">
+            <div className="cal-week-gutter-head" aria-hidden="true" />
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
               <div key={d}>{d}</div>
             ))}
           </div>
-          <div className="cal-grid">
-            {monthCells.map((ymd) => {
-              const kind = overlayKindForDay(ymd);
-              const inMonth = ymd.startsWith(
-                `${monthAnchor.y}-${String(monthAnchor.m).padStart(2, "0")}`
-              );
-              const daySessions = byDay.get(ymd) || [];
+          <div className="cal-month-rows">
+            {monthRows.map((row) => {
+              const info = getQldWeekInfo(row[0]);
               return (
-                <div
-                  key={ymd}
-                  className={`cal-cell${!inMonth ? " is-out" : ""}${kind !== "term" && kind !== "none" ? " is-closed" : ""}`}
-                  data-kind={kind}
-                >
-                  <div className="cal-cell-day">{Number(ymd.slice(-2))}</div>
-                  <div className="cal-cell-events">
-                    {daySessions.slice(0, 3).map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className={`cal-chip cal-chip-${s.type}`}
-                        onClick={() => setSelectedId(s.id)}
-                      >
-                        {formatTime(s.starts_at)} {s.title}
-                      </button>
-                    ))}
-                    {daySessions.length > 3 && (
-                      <span className="muted" style={{ fontSize: "0.72rem" }}>
-                        +{daySessions.length - 3} more
-                      </span>
-                    )}
+                <div key={row[0]} className="cal-month-row">
+                  <div
+                    className={`cal-week-gutter${info.kind === "holiday" || info.kind === "public_holiday" ? " is-hols" : ""}`}
+                    title={info.label}
+                  >
+                    <span>{info.shortLabel || "—"}</span>
+                  </div>
+                  <div className="cal-grid-row">
+                    {row.map((ymd) => {
+                      const kind = overlayKindForDay(ymd);
+                      const inMonth = ymd.startsWith(
+                        `${monthAnchor.y}-${String(monthAnchor.m).padStart(2, "0")}`
+                      );
+                      const daySessions = byDay.get(ymd) || [];
+                      const isToday = ymd === todayYmd;
+                      return (
+                        <div
+                          key={ymd}
+                          className={`cal-cell${!inMonth ? " is-out" : ""}${kind !== "term" && kind !== "none" ? " is-closed" : ""}${isToday ? " is-today" : ""}`}
+                          data-kind={kind}
+                        >
+                          <div className="cal-cell-day">
+                            {isToday && <span className="cal-today-dot" aria-hidden="true" />}
+                            {Number(ymd.slice(-2))}
+                          </div>
+                          <div className="cal-cell-events">
+                            {daySessions.slice(0, 3).map((s) => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                className={`cal-chip cal-chip-${s.type}`}
+                                onClick={() => setSelectedId(s.id)}
+                              >
+                                {formatTime(s.starts_at)} {s.title}
+                              </button>
+                            ))}
+                            {daySessions.length > 3 && (
+                              <span className="muted" style={{ fontSize: "0.72rem" }}>
+                                +{daySessions.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -322,34 +351,51 @@ export function CalendarApp({
           </div>
         </div>
       ) : (
-        <div className="cal-week">
-          {weekDays.map((ymd) => {
-            const kind = overlayKindForDay(ymd);
-            const daySessions = byDay.get(ymd) || [];
-            return (
-              <div
-                key={ymd}
-                className={`cal-week-col${kind !== "term" && kind !== "none" ? " is-closed" : ""}`}
-                data-kind={kind}
-              >
-                <div className="cal-week-head">{formatDayLabel(ymd)}</div>
-                <div className="cal-week-body">
-                  {daySessions.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      className={`cal-chip cal-chip-${s.type}`}
-                      onClick={() => setSelectedId(s.id)}
-                    >
-                      <strong>{formatTime(s.starts_at)}</strong>
-                      <span>{s.title}</span>
-                    </button>
-                  ))}
-                  {!daySessions.length && <p className="muted" style={{ fontSize: "0.82rem" }}>No sessions</p>}
+        <div className="cal-week-wrap">
+          {weekInfo.label && (
+            <div
+              className={`cal-week-banner${weekInfo.kind === "holiday" || weekInfo.kind === "public_holiday" ? " is-hols" : ""}`}
+            >
+              {weekInfo.label}
+            </div>
+          )}
+          <div className="cal-week">
+            {weekDays.map((ymd) => {
+              const kind = overlayKindForDay(ymd);
+              const daySessions = byDay.get(ymd) || [];
+              const isToday = ymd === todayYmd;
+              return (
+                <div
+                  key={ymd}
+                  className={`cal-week-col${kind !== "term" && kind !== "none" ? " is-closed" : ""}${isToday ? " is-today" : ""}`}
+                  data-kind={kind}
+                >
+                  <div className="cal-week-head">
+                    {isToday && <span className="cal-today-dot" aria-hidden="true" />}
+                    {formatDayLabel(ymd)}
+                  </div>
+                  <div className="cal-week-body">
+                    {daySessions.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className={`cal-chip cal-chip-${s.type}`}
+                        onClick={() => setSelectedId(s.id)}
+                      >
+                        <strong>{formatTime(s.starts_at)}</strong>
+                        <span>{s.title}</span>
+                      </button>
+                    ))}
+                    {!daySessions.length && (
+                      <p className="muted" style={{ fontSize: "0.82rem" }}>
+                        No sessions
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -518,7 +564,7 @@ export function CalendarApp({
       )}
 
       {showGenerate && canEdit && (
-        <Modal title="Generate term schedule" onClose={() => setShowGenerate(false)}>
+        <Modal title="Set recurring pair schedule" onClose={() => setShowGenerate(false)}>
           <GenerateTermForm
             role={role}
             profileId={profileId}
@@ -760,6 +806,10 @@ function GenerateTermForm({
         run(false, e.currentTarget);
       }}
     >
+      <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+        Saves a weekly recurring time for this tutoring pair, then fills the selected QLD term
+        (holiday dates skipped). Run again for another term to keep using the same recurrence.
+      </p>
       {role === "admin" && (
         <label className="field">
           Type
@@ -770,8 +820,8 @@ function GenerateTermForm({
         </label>
       )}
       <label className="field">
-        QLD term
-        <select name="termId" required defaultValue={QLD_TERMS[0]?.id}>
+        Fill QLD term
+        <select name="termId" required defaultValue={QLD_TERMS.find((t) => t.id.startsWith("2026"))?.id || QLD_TERMS[0]?.id}>
           {QLD_TERMS.map((t) => (
             <option key={t.id} value={t.id}>
               {t.label}
@@ -835,7 +885,7 @@ function GenerateTermForm({
       {err && <p style={{ color: "crimson", margin: 0 }}>{err}</p>}
       {preview && (
         <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-          Will create <strong>{preview.count}</strong> sessions
+          Will save the weekly recurrence and create <strong>{preview.count}</strong> sessions
           {preview.skipped.length ? ` (skipping ${preview.skipped.length} holiday dates)` : ""}.
         </p>
       )}
@@ -848,7 +898,7 @@ function GenerateTermForm({
           Preview
         </button>
         <button className="btn btn-primary" type="submit">
-          Generate
+          Save recurring + fill term
         </button>
       </div>
     </form>

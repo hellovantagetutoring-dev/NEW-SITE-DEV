@@ -15,6 +15,7 @@ The portal code lives in `portal/`. Finish these steps so auth and downloads wor
 2. Paste and run `supabase/migrations/001_init.sql`.
 3. Then paste and run `supabase/migrations/002_streams_and_tutor_scope.sql` (streams + tutor 1-1 assignments).
 4. Then paste and run `supabase/migrations/003_calendar_admin.sql` (reschedule proposals, calendar feed tokens, indexes).
+5. Then paste and run `supabase/migrations/004_session_series.sql` (recurring pair schedules).
 4. You should see tables: `profiles`, `classes`, `enrolments`, `private_assignments`, etc.
 
 ## 3. Storage bucket

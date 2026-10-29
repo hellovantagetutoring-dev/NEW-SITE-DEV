@@ -1652,3 +1652,106 @@ button:disabled,
     font-size: 0.62rem;
   }
 }
+
+.cal-dow-with-gutter {
+  grid-template-columns: 4.25rem repeat(7, 1fr);
+}
+
+.cal-week-gutter-head {
+  min-height: 1rem;
+}
+
+.cal-month-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.cal-month-row {
+  display: grid;
+  grid-template-columns: 4.25rem 1fr;
+  border-top: 1px solid rgba(18, 38, 74, 0.08);
+}
+
+.cal-week-gutter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--bg-navy);
+  background: rgba(18, 38, 74, 0.04);
+  border-right: 1px solid rgba(18, 38, 74, 0.08);
+}
+
+.cal-week-gutter.is-hols {
+  background: rgba(201, 154, 58, 0.14);
+  color: #6a4f12;
+}
+
+.cal-grid-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.cal-grid-row .cal-cell {
+  border-top: 0;
+}
+
+.cal-cell-day {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.cal-today-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: #d Damon2b;
+  flex-shrink: 0;
+}
+
+.cal-cell.is-today .cal-cell-day,
+.cal-week-col.is-today .cal-week-head {
+  font-weight: 800;
+}
+
+.cal-week-wrap {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.cal-week-banner {
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 750;
+  background: rgba(18, 38, 74, 0.06);
+  color: var(--bg-navy);
+}
+
+.cal-week-banner.is-hols {
+  background: rgba(201, 154, 58, 0.16);
+  color: #6a4f12;
+}
+
+.cal-week-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (max-width: 900px) {
+  .cal-dow-with-gutter,
+  .cal-month-row {
+    grid-template-columns: 3.1rem 1fr;
+  }
+
+  .cal-week-gutter {
+    font-size: 0.6rem;
+    padding: 0.25rem 0.15rem;
+  }
+}
