@@ -5,18 +5,35 @@ import { useState } from "react";
 
 type ClassOpt = { id: string; name: string; subject: string; unit_band: string };
 type ProfileOpt = { id: string; email: string; full_name: string; role: string };
+type PairOpt = {
+  tutor_id: string;
+  student_id: string;
+  subject: string;
+  note: string;
+  tutorLabel: string;
+  studentLabel: string;
+  tutorEmail: string;
+  studentEmail: string;
+};
 
 export function AdminForms({
   isAdmin,
   classes,
   profiles,
+  pairs,
 }: {
   isAdmin: boolean;
   classes: ClassOpt[];
   profiles: ProfileOpt[];
+  pairs: PairOpt[];
 }) {
   const router = useRouter();
   const [msg, setMsg] = useState("");
+  const [editingPerson, setEditingPerson] = useState<string | null>(null);
+  const [editingPair, setEditingPair] = useState<string | null>(null);
+
+  const tutors = profiles.filter((p) => p.role === "tutor" || p.role === "admin");
+  const students = profiles.filter((p) => p.role === "student" || p.role === "admin");
 
   async function post(url: string, body: FormData | object) {
     setMsg("");
@@ -31,6 +48,8 @@ export function AdminForms({
       return;
     }
     setMsg(data.message || "Saved");
+    setEditingPerson(null);
+    setEditingPair(null);
     router.refresh();
   }
 
@@ -48,6 +67,195 @@ export function AdminForms({
         >
           {msg}
         </p>
+      )}
+
+      {isAdmin && (
+        <div className="card" style={{ display: "grid", gap: "0.85rem" }}>
+          <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Tutoring pairs</h2>
+          <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
+            Each pair is a tutor ↔ student for private 1-on-1. Schedule them on Calendar (including
+            generate term).
+          </p>
+
+          {pairs.length > 0 && (
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Tutor</th>
+                    <th>Student</th>
+                    <th>Subject</th>
+                    <th>Note</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pairs.map((p) => {
+                    const key = `${p.tutor_id}:${p.student_id}`;
+                    if (editingPair === key) {
+                      return (
+                        <tr key={key}>
+                          <td colSpan={5}>
+                            <form
+                              className="cal-form"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                const fd = new FormData(e.currentTarget);
+                                post("/api/admin/update-private", {
+                                  tutorId: p.tutor_id,
+                                  studentId: p.student_id,
+                                  newTutorId: fd.get("tutorId"),
+                                  newStudentId: fd.get("studentId"),
+                                  subject: fd.get("subject"),
+                                  note: fd.get("note"),
+                                });
+                              }}
+                            >
+                              <label className="field">
+                                Tutor
+                                <select name="tutorId" defaultValue={p.tutor_id} required>
+                                  {tutors.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.full_name || t.email}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="field">
+                                Student
+                                <select name="studentId" defaultValue={p.student_id} required>
+                                  {students.map((s) => (
+                                    <option key={s.id} value={s.id}>
+                                      {s.full_name || s.email}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="field">
+                                Subject
+                                <input name="subject" defaultValue={p.subject} />
+                              </label>
+                              <label className="field">
+                                Note
+                                <input name="note" defaultValue={p.note} />
+                              </label>
+                              <div style={{ display: "flex", gap: "0.5rem" }}>
+                                <button className="btn btn-primary" type="submit">
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost"
+                                  onClick={() => setEditingPair(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </form>
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return (
+                      <tr key={key}>
+                        <td>
+                          <strong>{p.tutorLabel}</strong>
+                          <div className="muted" style={{ fontSize: "0.78rem" }}>
+                            {p.tutorEmail}
+                          </div>
+                        </td>
+                        <td>
+                          <strong>{p.studentLabel}</strong>
+                          <div className="muted" style={{ fontSize: "0.78rem" }}>
+                            {p.studentEmail}
+                          </div>
+                        </td>
+                        <td>{p.subject || "—"}</td>
+                        <td>{p.note || "—"}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            style={{ padding: "0.35rem 0.65rem" }}
+                            onClick={() => setEditingPair(key)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            style={{ padding: "0.35rem 0.65rem" }}
+                            onClick={() => {
+                              if (confirm(`Unlink ${p.studentLabel} ↔ ${p.tutorLabel}?`)) {
+                                post("/api/admin/delete-private", {
+                                  tutorId: p.tutor_id,
+                                  studentId: p.student_id,
+                                });
+                              }
+                            }}
+                          >
+                            Unlink
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {!pairs.length && <p className="muted">No pairs yet.</p>}
+
+          <form
+            style={{ display: "grid", gap: "0.65rem" }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              post("/api/admin/assign-private", {
+                tutorId: fd.get("tutorId"),
+                studentId: fd.get("studentId"),
+                subject: fd.get("subject"),
+                note: fd.get("note"),
+              });
+              e.currentTarget.reset();
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: "0.95rem" }}>Add pair</h3>
+            <label className="field">
+              Tutor
+              <select name="tutorId" required>
+                <option value="">Select…</option>
+                {tutors.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name || t.email} ({t.role})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              Student
+              <select name="studentId" required>
+                <option value="">Select…</option>
+                {students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name || s.email}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              Subject
+              <input name="subject" placeholder="Methods" />
+            </label>
+            <label className="field">
+              Note
+              <input name="note" placeholder="Weekly Thursday" />
+            </label>
+            <button className="btn btn-primary" type="submit">
+              Link pair
+            </button>
+          </form>
+        </div>
       )}
 
       {isAdmin && (
@@ -99,48 +307,6 @@ export function AdminForms({
           </label>
           <button className="btn btn-primary" type="submit">
             Create class
-          </button>
-        </form>
-      )}
-
-      {isAdmin && (
-        <form
-          className="card"
-          style={{ display: "grid", gap: "0.75rem" }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            post("/api/admin/assign-private", {
-              tutorEmail: fd.get("tutorEmail"),
-              studentEmail: fd.get("studentEmail"),
-              subject: fd.get("subject"),
-              note: fd.get("note"),
-            });
-            e.currentTarget.reset();
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Link private 1-on-1 (tutor ↔ student)</h2>
-          <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
-            Tutors only organise sessions for these students. They cannot upload or release PDFs.
-          </p>
-          <label className="field">
-            Tutor email
-            <input name="tutorEmail" type="email" required placeholder="tutor@…" />
-          </label>
-          <label className="field">
-            Student email
-            <input name="studentEmail" type="email" required placeholder="student@…" />
-          </label>
-          <label className="field">
-            Subject
-            <input name="subject" placeholder="Methods" />
-          </label>
-          <label className="field">
-            Note
-            <input name="note" placeholder="Weekly Thursday" />
-          </label>
-          <button className="btn btn-primary" type="submit">
-            Link assignment
           </button>
         </form>
       )}
@@ -252,16 +418,101 @@ export function AdminForms({
         </button>
       </form>
 
-      {isAdmin && profiles.length > 0 && (
+      {isAdmin && (
         <div className="card">
           <h2 style={{ margin: "0 0 0.75rem", fontSize: "1.05rem" }}>People</h2>
-          <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
-            {profiles.map((p) => (
-              <li key={p.id} style={{ marginBottom: "0.35rem" }}>
-                {p.full_name} · {p.email} · {p.role}
-              </li>
-            ))}
-          </ul>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {profiles.map((p) =>
+                  editingPerson === p.id ? (
+                    <tr key={p.id}>
+                      <td colSpan={4}>
+                        <form
+                          className="cal-form"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const fd = new FormData(e.currentTarget);
+                            post("/api/admin/update-person", {
+                              id: p.id,
+                              fullName: fd.get("fullName"),
+                              role: fd.get("role"),
+                            });
+                          }}
+                        >
+                          <label className="field">
+                            Full name
+                            <input name="fullName" defaultValue={p.full_name} required />
+                          </label>
+                          <label className="field">
+                            Role
+                            <select name="role" defaultValue={p.role}>
+                              <option value="student">Student</option>
+                              <option value="tutor">Tutor</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </label>
+                          <div style={{ display: "flex", gap: "0.5rem" }}>
+                            <button className="btn btn-primary" type="submit">
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() => setEditingPerson(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={p.id}>
+                      <td>{p.full_name || "—"}</td>
+                      <td>{p.email}</td>
+                      <td style={{ textTransform: "capitalize" }}>{p.role}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          style={{ padding: "0.35rem 0.65rem" }}
+                          onClick={() => setEditingPerson(p.id)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          style={{ padding: "0.35rem 0.65rem" }}
+                          onClick={() => {
+                            if (
+                              confirm(
+                                `Delete ${p.full_name || p.email}? This removes their login and enrolments.`
+                              )
+                            ) {
+                              post("/api/admin/delete-person", { id: p.id });
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+          {!profiles.length && <p className="muted">No people yet.</p>}
         </div>
       )}
     </div>
