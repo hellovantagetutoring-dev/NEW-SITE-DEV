@@ -42,6 +42,15 @@ export default function NotEnrolledPage() {
                 Try another account
               </Link>
             </div>
+            <p className="auth-legal">
+              <a href="https://vantagetutoring.com.au/legal#privacy" target="_blank" rel="noreferrer">
+                Privacy Policy
+              </a>
+              {" · "}
+              <a href="https://vantagetutoring.com.au/legal#terms" target="_blank" rel="noreferrer">
+                Terms of Use
+              </a>
+            </p>
           </div>
         </div>
       </div>

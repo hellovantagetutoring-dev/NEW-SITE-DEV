@@ -163,6 +163,18 @@ export default function LoginPage() {
               <br />
               <a href="mailto:hello@vantagetutoring.com.au">hello@vantagetutoring.com.au</a>
             </p>
+
+            <p className="auth-legal">
+              By signing in you agree to our{" "}
+              <a href="https://vantagetutoring.com.au/legal#terms" target="_blank" rel="noreferrer">
+                Terms of Use
+              </a>{" "}
+              and{" "}
+              <a href="https://vantagetutoring.com.au/legal#privacy" target="_blank" rel="noreferrer">
+                Privacy Policy
+              </a>
+              .
+            </p>
           </div>
         </div>
       </div>

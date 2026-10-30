@@ -67,10 +67,18 @@ export function AppShell({
 
         {!workspace && (
           <footer className="shell-footer">
-            <span>Student Portal</span>
-            <a href="https://vantagetutoring.com.au" target="_blank" rel="noreferrer">
-              vantagetutoring.com.au
-            </a>
+            <span>Learning Portal</span>
+            <span className="shell-footer-links">
+              <a href="https://vantagetutoring.com.au/legal#privacy" target="_blank" rel="noreferrer">
+                Privacy
+              </a>
+              <a href="https://vantagetutoring.com.au/legal#terms" target="_blank" rel="noreferrer">
+                Terms
+              </a>
+              <a href="https://vantagetutoring.com.au" target="_blank" rel="noreferrer">
+                vantagetutoring.com.au
+              </a>
+            </span>
           </footer>
         )}
       </div>
