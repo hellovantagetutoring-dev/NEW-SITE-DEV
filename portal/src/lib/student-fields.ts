@@ -35,6 +35,40 @@ export type StudentSubject = (typeof STUDENT_SUBJECTS)[number]["value"];
 const SUBJECT_VALUES = new Set(STUDENT_SUBJECTS.map((s) => s.value));
 const SUBJECT_LABELS = Object.fromEntries(STUDENT_SUBJECTS.map((s) => [s.value, s.label]));
 
+/** Canonical subject slug for enrolments / class matching (methods, chemistry, …). */
+export function normalizeSubjectKey(raw: string): string {
+  const s = String(raw || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[_/]+/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+  if (
+    s === "maths-methods" ||
+    s === "mathematical-methods" ||
+    s === "math-methods" ||
+    s === "mathematicalmethods"
+  ) {
+    return "methods";
+  }
+  if (
+    s === "specialist-maths" ||
+    s === "specialist-mathematics" ||
+    s === "specialistmathematics"
+  ) {
+    return "specialist";
+  }
+  if (s === "digi-sol" || s === "digitalsolutions" || s === "digital-solution") {
+    return "digital-solutions";
+  }
+  return s;
+}
+
+export function subjectLabel(slug: string): string {
+  const key = normalizeSubjectKey(slug);
+  return SUBJECT_LABELS[key] || slug;
+}
+
 export function parseYearLevel(stored?: string | null): {
  preset: string;
  other: string;

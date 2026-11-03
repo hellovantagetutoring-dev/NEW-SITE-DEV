@@ -15,6 +15,7 @@ import {
  YEAR_LEVEL_PRESETS,
  formatSubjects,
  formatYearLevel,
+ normalizeSubjectKey,
  parseSubjects,
  parseYearLevel,
 } from "@/lib/student-fields";
@@ -162,11 +163,8 @@ function RoleAndStudentFields({
  );
 }
 
-function normalizeSubjectKey(raw: string) {
- const s = raw.toLowerCase().trim();
- if (s === "maths-methods" || s === "mathematical-methods") return "methods";
- if (s === "specialist-maths" || s === "specialist-mathematics") return "specialist";
- return s;
+function sameToggles(a: AccessToggles | undefined, b: AccessToggles | undefined) {
+ return !!a && !!b && a.masterclass === b.masterclass && a.private11 === b.private11;
 }
 
 function SubjectAccessMatrix({
@@ -181,7 +179,8 @@ function SubjectAccessMatrix({
  onSaved: (msg: string, ok: boolean) => void;
 }) {
  const [busy, setBusy] = useState<string | null>(null);
- const savingRef = useRef(false);
+ // Confirmed local writes win until the refreshed server payload matches.
+ const confirmedRef = useRef<Record<string, AccessToggles>>({});
  const fromServer = useMemo(() => {
  const map: Record<string, AccessToggles> = {};
  const tiersBySubject = new Map<string, string[]>();
@@ -200,19 +199,25 @@ function SubjectAccessMatrix({
 
  const [local, setLocal] = useState(fromServer);
 
- // Sync from server only when not mid-save (avoids wiping optimistic toggles / remount races).
  useEffect(() => {
- if (savingRef.current) return;
- setLocal(fromServer);
+ const next = { ...fromServer };
+ for (const [subject, confirmed] of Object.entries(confirmedRef.current)) {
+ if (sameToggles(fromServer[subject], confirmed)) {
+ delete confirmedRef.current[subject];
+ } else {
+ next[subject] = confirmed;
+ }
+ }
+ setLocal(next);
  }, [fromServer]);
 
  const rows = Object.keys(local).sort();
 
  async function save(subject: string, next: AccessToggles) {
  const prev = local[subject] || togglesFromTier(null);
+ confirmedRef.current[subject] = next;
  setLocal((p) => ({ ...p, [subject]: next }));
  setBusy(subject);
- savingRef.current = true;
  const res = await fetch("/api/admin/set-subject-access", {
  method: "POST",
  headers: { "Content-Type": "application/json" },
@@ -226,17 +231,13 @@ function SubjectAccessMatrix({
  const data = await res.json().catch(() => ({}));
  setBusy(null);
  if (!res.ok) {
+ delete confirmedRef.current[subject];
  setLocal((p) => ({ ...p, [subject]: prev }));
- savingRef.current = false;
- onSaved(data.message || data.error || "Failed", false);
+ onSaved(data.error || data.message || "Failed to save access", false);
  return;
  }
- // Keep optimistic value through refresh so toggles don't snap off if the
- // enrolment join is briefly incomplete.
+ confirmedRef.current[subject] = next;
  onSaved(data.message || "Saved", true);
- window.setTimeout(() => {
- savingRef.current = false;
- }, 1200);
  }
 
  if (!rows.length) {

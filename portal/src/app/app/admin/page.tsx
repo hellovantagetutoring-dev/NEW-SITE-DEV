@@ -70,13 +70,23 @@ export default async function AdminPage() {
     .select("profile_id, class_id, tier, classes:class_id (id, subject, stream, name)");
   let enrolmentRows: EnrolRow[] = (enrolQuery.data || []) as EnrolRow[];
   if (enrolQuery.error) {
-    const fallback = await supabase.from("enrolments").select("profile_id, class_id, tier");
-    enrolmentRows = (fallback.data || []).map((e) => ({
-      profile_id: e.profile_id,
-      class_id: e.class_id,
-      tier: e.tier || "masterclass",
-      classes: null,
-    }));
+    const withTier = await supabase.from("enrolments").select("profile_id, class_id, tier");
+    if (!withTier.error) {
+      enrolmentRows = (withTier.data || []).map((e) => ({
+        profile_id: e.profile_id,
+        class_id: e.class_id,
+        tier: e.tier || "masterclass",
+        classes: null,
+      }));
+    } else {
+      const bare = await supabase.from("enrolments").select("profile_id, class_id");
+      enrolmentRows = (bare.data || []).map((e) => ({
+        profile_id: e.profile_id,
+        class_id: e.class_id,
+        tier: "masterclass",
+        classes: null,
+      }));
+    }
   }
 
   // Prefer the already-loaded classes list so subject never blanks when the embed join fails.
