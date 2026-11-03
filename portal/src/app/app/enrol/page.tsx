@@ -1,12 +1,17 @@
 import { redirect } from "next/navigation";
 import { marketingEnrolUrl } from "@/lib/enrol-links";
 
-/** Public redirect to marketing Enrol today (no login gate). */
-export default async function EnrolPage({
+/**
+ * Legacy path under /app. App layout requires a profile, so bounce via public /enrol.
+ * Prefer linking to /enrol or the marketing site directly.
+ */
+export default async function AppEnrolPage({
   searchParams,
 }: {
   searchParams: Promise<{ program?: string }>;
 }) {
   const { program } = await searchParams;
-  redirect(marketingEnrolUrl(program));
+  const q = program ? `?program=${encodeURIComponent(program)}` : "";
+  // Absolute marketing URL avoids the authenticated /app layout dead-end when logged out.
+  redirect(marketingEnrolUrl(program) || `/enrol${q}`);
 }

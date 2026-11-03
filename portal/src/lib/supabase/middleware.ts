@@ -30,13 +30,20 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAuthPage = path.startsWith("/login") || path.startsWith("/auth");
-  // /app/enrol redirects to the marketing enrol form; keep it reachable without login
+  // Public enrol redirects to the marketing form (avoid /app auth layout)
   const isPublic =
     path === "/" ||
     isAuthPage ||
     path.startsWith("/not-enrolled") ||
-    path === "/app/enrol" ||
-    path.startsWith("/app/enrol/");
+    path === "/enrol" ||
+    path.startsWith("/enrol/");
+
+  // Old bookmarks to /app/enrol: send to public /enrol (avoids auth layout → /login)
+  if (!user && (path === "/app/enrol" || path.startsWith("/app/enrol/"))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/enrol";
+    return NextResponse.redirect(url);
+  }
 
   if (!user && !isPublic && path.startsWith("/app")) {
     const url = request.nextUrl.clone();
