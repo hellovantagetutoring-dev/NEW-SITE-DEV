@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AccessTierToggles } from "@/components/AccessTierToggles";
 import {
  accessPills,
@@ -162,6 +162,13 @@ function RoleAndStudentFields({
  );
 }
 
+function normalizeSubjectKey(raw: string) {
+ const s = raw.toLowerCase().trim();
+ if (s === "maths-methods" || s === "mathematical-methods") return "methods";
+ if (s === "specialist-maths" || s === "specialist-mathematics") return "specialist";
+ return s;
+}
+
 function SubjectAccessMatrix({
  profileId,
  subjects,
@@ -174,15 +181,16 @@ function SubjectAccessMatrix({
  onSaved: (msg: string, ok: boolean) => void;
 }) {
  const [busy, setBusy] = useState<string | null>(null);
- const initial = useMemo(() => {
+ const savingRef = useRef(false);
+ const fromServer = useMemo(() => {
  const map: Record<string, AccessToggles> = {};
  const tiersBySubject = new Map<string, string[]>();
  for (const e of enrolments.filter((x) => x.profile_id === profileId)) {
- const sub = (e.subject || "").toLowerCase();
+ const sub = normalizeSubjectKey(e.subject || "");
  if (!sub) continue;
  tiersBySubject.set(sub, [...(tiersBySubject.get(sub) || []), e.tier]);
  }
- const keys = new Set(subjects.map((s) => s.toLowerCase()).filter(Boolean));
+ const keys = new Set(subjects.map((s) => normalizeSubjectKey(s)).filter(Boolean));
  for (const s of tiersBySubject.keys()) keys.add(s);
  for (const subject of keys) {
  map[subject] = togglesFromTier(mergeTiers(tiersBySubject.get(subject) || []));
@@ -190,12 +198,21 @@ function SubjectAccessMatrix({
  return map;
  }, [enrolments, profileId, subjects]);
 
- const [local, setLocal] = useState(initial);
+ const [local, setLocal] = useState(fromServer);
+
+ // Sync from server only when not mid-save (avoids wiping optimistic toggles / remount races).
+ useEffect(() => {
+ if (savingRef.current) return;
+ setLocal(fromServer);
+ }, [fromServer]);
+
  const rows = Object.keys(local).sort();
 
  async function save(subject: string, next: AccessToggles) {
- setLocal((prev) => ({ ...prev, [subject]: next }));
+ const prev = local[subject] || togglesFromTier(null);
+ setLocal((p) => ({ ...p, [subject]: next }));
  setBusy(subject);
+ savingRef.current = true;
  const res = await fetch("/api/admin/set-subject-access", {
  method: "POST",
  headers: { "Content-Type": "application/json" },
@@ -209,9 +226,17 @@ function SubjectAccessMatrix({
  const data = await res.json().catch(() => ({}));
  setBusy(null);
  if (!res.ok) {
- setLocal((prev) => ({ ...prev, [subject]: initial[subject] || togglesFromTier(null) }));
+ setLocal((p) => ({ ...p, [subject]: prev }));
+ savingRef.current = false;
+ onSaved(data.message || data.error || "Failed", false);
+ return;
  }
- onSaved(data.message || data.error || (res.ok ? "Saved" : "Failed"), res.ok);
+ // Keep optimistic value through refresh so toggles don't snap off if the
+ // enrolment join is briefly incomplete.
+ onSaved(data.message || "Saved", true);
+ window.setTimeout(() => {
+ savingRef.current = false;
+ }, 1200);
  }
 
  if (!rows.length) {
@@ -714,21 +739,6 @@ export function AdminForms({
  { value: "admin", label: "Admin" },
  ]}
  />
- {isStudent && (
- <SubjectAccessMatrix
- key={`${p.id}:${enrolments
- .filter((e) => e.profile_id === p.id)
- .map((e) => `${e.subject}:${e.tier}`)
- .join("|")}`}
- profileId={p.id}
- subjects={p.subjects || []}
- enrolments={enrolments}
- onSaved={(text, ok) => {
- setMsg({ text, ok });
- if (ok) void router.refresh();
- }}
- />
- )}
  <div className="admin-edit-actions">
  <button className="btn btn-primary" type="submit">
  Save profile
@@ -742,6 +752,20 @@ export function AdminForms({
  </button>
  </div>
  </form>
+ {isStudent && (
+ <div className="admin-edit-panel" style={{ marginTop: "0.75rem" }}>
+ <SubjectAccessMatrix
+ key={p.id}
+ profileId={p.id}
+ subjects={p.subjects || []}
+ enrolments={enrolments}
+ onSaved={(text, ok) => {
+ setMsg({ text, ok });
+ if (ok) void router.refresh();
+ }}
+ />
+ </div>
+ )}
  </td>
  </tr>
  );

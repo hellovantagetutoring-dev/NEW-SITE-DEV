@@ -70,24 +70,33 @@ export default async function AdminPage() {
     .select("profile_id, class_id, tier, classes:class_id (id, subject, stream, name)");
   let enrolmentRows: EnrolRow[] = (enrolQuery.data || []) as EnrolRow[];
   if (enrolQuery.error) {
-    const fallback = await supabase.from("enrolments").select("profile_id, class_id");
+    const fallback = await supabase.from("enrolments").select("profile_id, class_id, tier");
     enrolmentRows = (fallback.data || []).map((e) => ({
       profile_id: e.profile_id,
       class_id: e.class_id,
-      tier: "masterclass",
+      tier: e.tier || "masterclass",
       classes: null,
     }));
   }
 
+  // Prefer the already-loaded classes list so subject never blanks when the embed join fails.
+  const classById = new Map((classes || []).map((c) => [c.id, c]));
+
   const enrolments = enrolmentRows.map((e) => {
-    const klass = Array.isArray(e.classes) ? e.classes[0] : e.classes;
+    const embedded = Array.isArray(e.classes) ? e.classes[0] : e.classes;
+    const fromList = classById.get(e.class_id);
+    const subject = (
+      fromList?.subject ||
+      embedded?.subject ||
+      ""
+    ).toLowerCase();
     return {
       profile_id: e.profile_id,
       class_id: e.class_id,
       tier: e.tier || "masterclass",
-      subject: klass?.subject || "",
-      stream: klass?.stream || "masterclass",
-      className: klass?.name || "",
+      subject,
+      stream: fromList?.stream || embedded?.stream || "masterclass",
+      className: fromList?.name || embedded?.name || "",
     };
   });
 

@@ -87,11 +87,16 @@ export async function POST(request: Request) {
           ? tierRaw
           : "masterclass";
       const enrolRow = { class_id: classId, profile_id: userId, tier };
-      let { error: enrolErr } = await service.from("enrolments").upsert(enrolRow);
+      let { error: enrolErr } = await service
+        .from("enrolments")
+        .upsert(enrolRow, { onConflict: "profile_id,class_id" });
       if (enrolErr && /tier|schema cache/i.test(enrolErr.message)) {
         ({ error: enrolErr } = await service
           .from("enrolments")
-          .upsert({ class_id: classId, profile_id: userId }));
+          .upsert(
+            { class_id: classId, profile_id: userId },
+            { onConflict: "profile_id,class_id" }
+          ));
       }
       if (enrolErr) return NextResponse.json({ error: enrolErr.message }, { status: 500 });
     }
