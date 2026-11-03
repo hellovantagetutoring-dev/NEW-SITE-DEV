@@ -6,26 +6,43 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 type ClassRow = { id: string; name: string; subject: string; stream: string };
 
+function subjectAliases(subjectKey: string): string[] {
+  return Array.from(
+    new Set(
+      [
+        subjectKey,
+        subjectKey === "methods" ? "maths-methods" : "",
+        subjectKey === "methods" ? "mathematical-methods" : "",
+        subjectKey === "specialist" ? "specialist-maths" : "",
+        subjectKey === "specialist" ? "specialist-mathematics" : "",
+        subjectKey === "maths-methods" ? "methods" : "",
+        subjectKey === "specialist-maths" ? "specialist" : "",
+      ].filter(Boolean)
+    )
+  );
+}
+
 async function ensureMasterclass(
   service: ReturnType<typeof createServiceClient>,
   subjectKey: string
-): Promise<{ klass: ClassRow | null; matched: ClassRow[]; error?: string }> {
-  const { data: all, error: classErr } = await service
+): Promise<{ klass: ClassRow | null; classIds: string[]; error?: string }> {
+  const aliases = subjectAliases(subjectKey);
+  const { data, error: classErr } = await service
     .from("classes")
     .select("id, name, subject, stream")
     .eq("stream", "masterclass")
-    .order("name");
+    .in("subject", aliases)
+    .order("name")
+    .limit(20);
 
-  if (classErr) return { klass: null, matched: [], error: classErr.message };
+  if (classErr) return { klass: null, classIds: [], error: classErr.message };
 
-  const matched = (all || []).filter(
-    (c) => normalizeSubjectKey(String(c.subject || "")) === subjectKey
-  ) as ClassRow[];
-
+  const matched = (data || []) as ClassRow[];
   if (matched.length) {
     const exact =
-      matched.find((c) => String(c.subject || "").toLowerCase() === subjectKey) || matched[0];
-    return { klass: exact, matched };
+      matched.find((c) => normalizeSubjectKey(String(c.subject || "")) === subjectKey) ||
+      matched[0];
+    return { klass: exact, classIds: matched.map((c) => c.id) };
   }
 
   const label = subjectLabel(subjectKey);
@@ -44,64 +61,12 @@ async function ensureMasterclass(
   if (createErr || !created) {
     return {
       klass: null,
-      matched: [],
+      classIds: [],
       error: createErr?.message || `Could not create masterclass for “${subjectKey}”.`,
     };
   }
 
-  return { klass: created as ClassRow, matched: [created as ClassRow] };
-}
-
-async function upsertEnrolment(
-  service: ReturnType<typeof createServiceClient>,
-  profileId: string,
-  classId: string,
-  tier: string
-): Promise<string | null> {
-  const row = { profile_id: profileId, class_id: classId, tier };
-
-  const upsert = await service.from("enrolments").upsert(row, {
-    onConflict: "profile_id,class_id",
-  });
-  if (!upsert.error) return null;
-
-  if (/tier|schema cache/i.test(upsert.error.message)) {
-    // Column may be missing from schema cache — still ensure the enrolment row exists.
-    const bare = await service.from("enrolments").upsert(
-      { profile_id: profileId, class_id: classId },
-      { onConflict: "profile_id,class_id" }
-    );
-    if (!bare.error) {
-      const upd = await service
-        .from("enrolments")
-        .update({ tier })
-        .eq("profile_id", profileId)
-        .eq("class_id", classId);
-      if (upd.error && !/tier|schema cache/i.test(upd.error.message)) {
-        return upd.error.message;
-      }
-      return null;
-    }
-  }
-
-  // Fallback path: update then insert (some PostgREST configs reject upsert).
-  const upd = await service
-    .from("enrolments")
-    .update({ tier })
-    .eq("profile_id", profileId)
-    .eq("class_id", classId)
-    .select("profile_id");
-  if (!upd.error && upd.data && upd.data.length > 0) return null;
-
-  const ins = await service.from("enrolments").insert(row);
-  if (!ins.error) return null;
-  if (/tier|schema cache/i.test(ins.error.message)) {
-    const bare = await service
-      .from("enrolments")
-      .insert({ profile_id: profileId, class_id: classId });
-    return bare.error?.message || null;
-  }
-  return ins.error.message;
+  return { klass: created as ClassRow, classIds: [created.id] };
 }
 
 export async function POST(request: Request) {
@@ -123,15 +88,13 @@ export async function POST(request: Request) {
   const tier = tierFromToggles({ masterclass, private11 });
   const service = createServiceClient();
 
-  const { klass, matched, error: ensureErr } = await ensureMasterclass(service, subjectKey);
+  const { klass, classIds, error: ensureErr } = await ensureMasterclass(service, subjectKey);
   if (ensureErr || !klass) {
     return NextResponse.json(
       { error: ensureErr || `No masterclass class for “${subjectKey}”.` },
       { status: 400 }
     );
   }
-
-  const classIds = matched.map((c) => c.id);
 
   if (!tier) {
     const { error } = await service
@@ -141,34 +104,29 @@ export async function POST(request: Request) {
       .in("class_id", classIds);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({
-      message: `Removed access for ${subjectLabel(subjectKey)}`,
+      message: `Removed ${subjectLabel(subjectKey)}`,
       tier: null,
       subject: subjectKey,
       classId: klass.id,
     });
   }
 
-  // Primary write on the canonical/first class.
-  const primaryErr = await upsertEnrolment(service, profileId, klass.id, tier);
-  if (primaryErr) return NextResponse.json({ error: primaryErr }, { status: 500 });
+  const row = { profile_id: profileId, class_id: klass.id, tier };
+  let { error } = await service.from("enrolments").upsert(row, {
+    onConflict: "profile_id,class_id",
+  });
 
-  // Keep sibling unit-band classes for the same subject in sync when already enrolled.
-  for (const id of classIds) {
-    if (id === klass.id) continue;
-    const { data: existing } = await service
-      .from("enrolments")
-      .select("profile_id")
-      .eq("profile_id", profileId)
-      .eq("class_id", id)
-      .maybeSingle();
-    if (existing) {
-      const syncErr = await upsertEnrolment(service, profileId, id, tier);
-      if (syncErr) return NextResponse.json({ error: syncErr }, { status: 500 });
-    }
+  if (error && /tier|schema cache/i.test(error.message)) {
+    ({ error } = await service.from("enrolments").upsert(
+      { profile_id: profileId, class_id: klass.id },
+      { onConflict: "profile_id,class_id" }
+    ));
   }
 
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
   return NextResponse.json({
-    message: `Updated ${klass.name} access`,
+    message: `Updated ${klass.name}`,
     tier,
     classId: klass.id,
     subject: subjectKey,

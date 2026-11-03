@@ -11,7 +11,8 @@ export function AccessTierToggles({
   compact = false,
 }: {
   value: AccessToggles;
-  onChange: (next: AccessToggles) => void;
+  /** Partial patch so parents can merge against latest state (multi-toggle safe). */
+  onChange: (patch: Partial<AccessToggles>) => void;
   /** Hidden input name for form posts that still expect a tier string */
   name?: string;
   legend?: string;
@@ -31,7 +32,7 @@ export function AccessTierToggles({
               id={`${id}-mc`}
               type="checkbox"
               checked={value.masterclass}
-              onChange={(e) => onChange({ ...value, masterclass: e.target.checked })}
+              onChange={(e) => onChange({ masterclass: e.target.checked })}
             />
             <span className="switch-track" aria-hidden="true" />
           </span>
@@ -46,7 +47,7 @@ export function AccessTierToggles({
               id={`${id}-p11`}
               type="checkbox"
               checked={value.private11}
-              onChange={(e) => onChange({ ...value, private11: e.target.checked })}
+              onChange={(e) => onChange({ private11: e.target.checked })}
             />
             <span className="switch-track" aria-hidden="true" />
           </span>

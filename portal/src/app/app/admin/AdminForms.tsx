@@ -172,15 +172,24 @@ function SubjectAccessMatrix({
  subjects,
  enrolments,
  onSaved,
+ onSettled,
 }: {
  profileId: string;
  subjects: string[];
  enrolments: EnrolOpt[];
  onSaved: (msg: string, ok: boolean) => void;
+ /** Fired once after in-flight / debounced saves drain (for a single refresh). */
+ onSettled?: () => void;
 }) {
- const [busy, setBusy] = useState<string | null>(null);
+ const [saving, setSaving] = useState<Record<string, boolean>>({});
  // Confirmed local writes win until the refreshed server payload matches.
  const confirmedRef = useRef<Record<string, AccessToggles>>({});
+ const localRef = useRef<Record<string, AccessToggles>>({});
+ const baselineRef = useRef<Record<string, AccessToggles>>({});
+ const timersRef = useRef<Record<string, number>>({});
+ const inflightRef = useRef(0);
+ const settleTimerRef = useRef<number | null>(null);
+
  const fromServer = useMemo(() => {
  const map: Record<string, AccessToggles> = {};
  const tiersBySubject = new Map<string, string[]>();
@@ -198,6 +207,7 @@ function SubjectAccessMatrix({
  }, [enrolments, profileId, subjects]);
 
  const [local, setLocal] = useState(fromServer);
+ localRef.current = local;
 
  useEffect(() => {
  const next = { ...fromServer };
@@ -211,13 +221,35 @@ function SubjectAccessMatrix({
  setLocal(next);
  }, [fromServer]);
 
+ useEffect(() => {
+ return () => {
+ for (const t of Object.values(timersRef.current)) window.clearTimeout(t);
+ if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+ };
+ }, []);
+
  const rows = Object.keys(local).sort();
 
- async function save(subject: string, next: AccessToggles) {
- const prev = local[subject] || togglesFromTier(null);
+ function queueSettle() {
+ if (!onSettled) return;
+ if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+ settleTimerRef.current = window.setTimeout(() => {
+ if (inflightRef.current === 0 && !Object.keys(timersRef.current).length) {
+ onSettled();
+ }
+ }, 450);
+ }
+
+ async function flush(subject: string) {
+ delete timersRef.current[subject];
+ const next = localRef.current[subject] || togglesFromTier(null);
+ const baseline = baselineRef.current[subject] || togglesFromTier(null);
+ if (sameToggles(next, baseline)) return;
+
  confirmedRef.current[subject] = next;
- setLocal((p) => ({ ...p, [subject]: next }));
- setBusy(subject);
+ setSaving((s) => ({ ...s, [subject]: true }));
+ inflightRef.current += 1;
+ try {
  const res = await fetch("/api/admin/set-subject-access", {
  method: "POST",
  headers: { "Content-Type": "application/json" },
@@ -229,15 +261,48 @@ function SubjectAccessMatrix({
  }),
  });
  const data = await res.json().catch(() => ({}));
- setBusy(null);
  if (!res.ok) {
  delete confirmedRef.current[subject];
- setLocal((p) => ({ ...p, [subject]: prev }));
+ setLocal((p) => ({ ...p, [subject]: baseline }));
+ localRef.current = { ...localRef.current, [subject]: baseline };
  onSaved(data.error || data.message || "Failed to save access", false);
  return;
  }
+ baselineRef.current[subject] = next;
  confirmedRef.current[subject] = next;
  onSaved(data.message || "Saved", true);
+ } finally {
+ inflightRef.current = Math.max(0, inflightRef.current - 1);
+ setSaving((s) => {
+ const copy = { ...s };
+ delete copy[subject];
+ return copy;
+ });
+ queueSettle();
+ }
+ }
+
+ function scheduleSave(subject: string) {
+ if (!baselineRef.current[subject]) {
+ baselineRef.current[subject] =
+ fromServer[subject] || localRef.current[subject] || togglesFromTier(null);
+ }
+ if (timersRef.current[subject]) window.clearTimeout(timersRef.current[subject]);
+ timersRef.current[subject] = window.setTimeout(() => {
+ void flush(subject);
+ }, 280);
+ }
+
+ function applyPatch(subject: string, patch: Partial<AccessToggles>) {
+ const prev = localRef.current[subject] || togglesFromTier(null);
+ const next = { ...prev, ...patch };
+ if (!baselineRef.current[subject]) {
+ baselineRef.current[subject] = fromServer[subject] || prev;
+ }
+ confirmedRef.current[subject] = next;
+ localRef.current = { ...localRef.current, [subject]: next };
+ setLocal((p) => ({ ...p, [subject]: next }));
+ scheduleSave(subject);
  }
 
  if (!rows.length) {
@@ -262,12 +327,9 @@ function SubjectAccessMatrix({
  legend=""
  name=""
  value={local[subject] || togglesFromTier(null)}
- onChange={(next) => {
- if (busy) return;
- void save(subject, next);
- }}
+ onChange={(patch) => applyPatch(subject, patch)}
  />
- {busy === subject && <span className="muted">Saving…</span>}
+ {saving[subject] && <span className="muted">Saving…</span>}
  </li>
  );
  })}
@@ -667,7 +729,10 @@ export function AdminForms({
  { value: "tutor", label: "Tutor" },
  ]}
  />
- <AccessTierToggles value={addAccess} onChange={setAddAccess} />
+ <AccessTierToggles
+ value={addAccess}
+ onChange={(patch) => setAddAccess((v) => ({ ...v, ...patch }))}
+ />
  <button className="btn btn-primary" type="submit">
  Authorise email
  </button>
@@ -760,10 +825,8 @@ export function AdminForms({
  profileId={p.id}
  subjects={p.subjects || []}
  enrolments={enrolments}
- onSaved={(text, ok) => {
- setMsg({ text, ok });
- if (ok) void router.refresh();
- }}
+ onSaved={(text, ok) => setMsg({ text, ok })}
+ onSettled={() => void router.refresh()}
  />
  </div>
  )}
@@ -826,7 +889,7 @@ export function AdminForms({
  </label>
  <AccessTierToggles
  value={authAccess}
- onChange={setAuthAccess}
+ onChange={(patch) => setAuthAccess((v) => ({ ...v, ...patch }))}
  legend="Gated access (if class selected)"
  compact
  />
