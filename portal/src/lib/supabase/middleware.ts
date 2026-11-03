@@ -30,7 +30,13 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAuthPage = path.startsWith("/login") || path.startsWith("/auth");
-  const isPublic = path === "/" || isAuthPage || path.startsWith("/not-enrolled");
+  // /app/enrol redirects to the marketing enrol form; keep it reachable without login
+  const isPublic =
+    path === "/" ||
+    isAuthPage ||
+    path.startsWith("/not-enrolled") ||
+    path === "/app/enrol" ||
+    path.startsWith("/app/enrol/");
 
   if (!user && !isPublic && path.startsWith("/app")) {
     const url = request.nextUrl.clone();

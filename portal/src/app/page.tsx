@@ -45,10 +45,18 @@ export default async function HomePage() {
               Sign in with Google or email to access Masterclass and 1-on-1 resources.
             </p>
             {configured ? (
-              <Link href="/login" className="btn btn-primary btn-block">
-                Sign in
-                <span aria-hidden="true">→</span>
-              </Link>
+              <>
+                <Link href="/login" className="btn btn-primary btn-block">
+                  Sign in
+                  <span aria-hidden="true">→</span>
+                </Link>
+                <p className="auth-help" style={{ marginTop: "1rem" }}>
+                  Not enrolled yet?{" "}
+                  <a href="https://vantagetutoring.com.au/enrol" target="_blank" rel="noreferrer">
+                    Enrol today
+                  </a>
+                </p>
+              </>
             ) : (
               <div className="card" style={{ textAlign: "left" }}>
                 <p style={{ margin: 0, fontWeight: 700, color: "var(--bg-navy)" }}>Setup needed</p>

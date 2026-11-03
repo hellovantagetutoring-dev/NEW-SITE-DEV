@@ -159,8 +159,12 @@ export default function LoginPage() {
             )}
 
             <p className="auth-help">
-              Having trouble signing in?
+              Not enrolled yet?{" "}
+              <a href="https://vantagetutoring.com.au/enrol" target="_blank" rel="noreferrer">
+                Enrol today
+              </a>
               <br />
+              Having trouble signing in?{" "}
               <a href="mailto:hello@vantagetutoring.com.au">hello@vantagetutoring.com.au</a>
             </p>
 

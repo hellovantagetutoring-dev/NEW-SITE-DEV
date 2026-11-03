@@ -1,4 +1,11 @@
 export type UserRole = "student" | "tutor" | "admin" | "unverified";
+export type TutorTier = "academic_tutor" | "senior_tutor" | null;
+export type EnrollmentTier = "private_1on1" | "masterclass" | "both";
+export type ResourceCategory =
+  | "core_resource"
+  | "mc_booklet_blank"
+  | "mc_solution"
+  | "mc_recording";
 
 export type Profile = {
   id: string;
@@ -6,6 +13,9 @@ export type Profile = {
   full_name: string;
   role: UserRole;
   last_sign_in_at: string | null;
+  year_level?: string;
+  subjects?: string[];
+  tutor_tier?: TutorTier;
 };
 
 export type ClassRow = {
@@ -32,7 +42,10 @@ export type ResourceFile = {
   id: string;
   set_id: string;
   kind: "workbook" | "homework" | "mock" | "solutions";
-  storage_path: string;
+  category?: ResourceCategory;
+  /** Only present when the viewer is allowed to access the file */
+  storage_path?: string;
+  video_url?: string | null;
   solutions_released_at: string | null;
 };
 

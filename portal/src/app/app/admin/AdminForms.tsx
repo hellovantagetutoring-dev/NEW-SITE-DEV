@@ -1,540 +1,1048 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { AccessTierToggles } from "@/components/AccessTierToggles";
+import {
+ accessPills,
+ mergeTiers,
+ tierFromToggles,
+ togglesFromTier,
+ type AccessToggles,
+} from "@/lib/access-tier";
+import {
+ STUDENT_SUBJECTS,
+ YEAR_LEVEL_PRESETS,
+ formatSubjects,
+ formatYearLevel,
+ parseSubjects,
+ parseYearLevel,
+} from "@/lib/student-fields";
 
-type ClassOpt = { id: string; name: string; subject: string; unit_band: string };
-type ProfileOpt = { id: string; email: string; full_name: string; role: string };
+type ClassOpt = {
+ id: string;
+ name: string;
+ subject: string;
+ unit_band: string;
+ stream?: string | null;
+};
+type ProfileOpt = {
+ id: string;
+ email: string;
+ full_name: string;
+ role: string;
+ year_level?: string | null;
+ subjects?: string[] | null;
+};
+type EnrolOpt = {
+ profile_id: string;
+ class_id: string;
+ tier: string;
+ subject: string;
+ stream: string;
+ className: string;
+};
 type PairOpt = {
-  tutor_id: string;
-  student_id: string;
-  subject: string;
-  note: string;
-  tutorLabel: string;
-  studentLabel: string;
-  tutorEmail: string;
-  studentEmail: string;
+ tutor_id: string;
+ student_id: string;
+ subject: string;
+ note: string;
+ tutorLabel: string;
+ studentLabel: string;
+ tutorEmail: string;
+ studentEmail: string;
 };
 
-export function AdminForms({
-  isAdmin,
-  classes,
-  profiles,
-  pairs,
+type AdminTab = "people" | "access" | "resources" | "classes";
+
+function StudentProfileFields({
+ yearLevel = "",
+ subjects = [],
 }: {
-  isAdmin: boolean;
-  classes: ClassOpt[];
-  profiles: ProfileOpt[];
-  pairs: PairOpt[];
+ yearLevel?: string | null;
+ subjects?: string[] | null;
 }) {
-  const router = useRouter();
-  const [msg, setMsg] = useState("");
-  const [editingPerson, setEditingPerson] = useState<string | null>(null);
-  const [editingPair, setEditingPair] = useState<string | null>(null);
+ const parsedYear = parseYearLevel(yearLevel);
+ const parsedSubjects = parseSubjects(subjects);
+ const [yearPreset, setYearPreset] = useState(parsedYear.preset);
+ const [otherSubjectOn, setOtherSubjectOn] = useState(!!parsedSubjects.other);
 
-  const tutors = profiles.filter((p) => p.role === "tutor" || p.role === "admin");
-  const students = profiles.filter(
-    (p) => p.role === "student" || p.role === "admin" || p.role === "unverified"
-  );
+ return (
+ <>
+ <label className="field">
+ Year level
+ <select name="yearLevel" value={yearPreset} onChange={(e) => setYearPreset(e.target.value)}>
+ <option value="">Select…</option>
+ {YEAR_LEVEL_PRESETS.map((y) => (
+ <option key={y} value={y}>
+ {y}
+ </option>
+ ))}
+ <option value="other">Other</option>
+ </select>
+ </label>
+ {yearPreset === "other" && (
+ <label className="field">
+ Other year / program
+ <input
+ name="yearLevelOther"
+ defaultValue={parsedYear.other}
+ placeholder="e.g. Gap year, Uni Sem 1"
+ required
+ />
+ </label>
+ )}
+ <fieldset className="admin-subjects-fieldset">
+ <legend>Subjects</legend>
+ <div className="admin-subjects-grid">
+ {STUDENT_SUBJECTS.map((s) => (
+ <label key={s.value} className="admin-subject-check">
+ <input
+ type="checkbox"
+ name="subjects"
+ value={s.value}
+ defaultChecked={parsedSubjects.selected.includes(s.value)}
+ />
+ {s.label}
+ </label>
+ ))}
+ <label className="admin-subject-check">
+ <input
+ type="checkbox"
+ checked={otherSubjectOn}
+ onChange={(e) => setOtherSubjectOn(e.target.checked)}
+ />
+ Other
+ </label>
+ </div>
+ {otherSubjectOn && (
+ <label className="field" style={{ marginTop: "0.55rem" }}>
+ Other subject(s)
+ <input
+ name="subjectsOther"
+ defaultValue={parsedSubjects.other}
+ placeholder="Comma-separated if more than one"
+ required
+ />
+ </label>
+ )}
+ </fieldset>
+ </>
+ );
+}
 
-  function roleLabel(role: string) {
-    if (role === "unverified") return "(unverified login)";
-    return role;
-  }
+function RoleAndStudentFields({
+ label = "Membership type",
+ defaultRole = "student",
+ options,
+ yearLevel,
+ subjects,
+}: {
+ label?: string;
+ defaultRole?: string;
+ options: { value: string; label: string }[];
+ yearLevel?: string | null;
+ subjects?: string[] | null;
+}) {
+ const [role, setRole] = useState(defaultRole);
+ return (
+ <>
+ <label className="field">
+ {label}
+ <select name="role" value={role} onChange={(e) => setRole(e.target.value)} required>
+ {options.map((o) => (
+ <option key={o.value} value={o.value}>
+ {o.label}
+ </option>
+ ))}
+ </select>
+ </label>
+ {role === "student" && <StudentProfileFields yearLevel={yearLevel} subjects={subjects} />}
+ </>
+ );
+}
 
-  async function post(url: string, body: FormData | object) {
-    setMsg("");
-    const res = await fetch(url, {
-      method: "POST",
-      body: body instanceof FormData ? body : JSON.stringify(body),
-      headers: body instanceof FormData ? undefined : { "Content-Type": "application/json" },
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setMsg(data.error || "Something went wrong");
-      return;
-    }
-    setMsg(data.message || "Saved");
-    setEditingPerson(null);
-    setEditingPair(null);
-    router.refresh();
-  }
+function SubjectAccessMatrix({
+ profileId,
+ subjects,
+ enrolments,
+ onSaved,
+}: {
+ profileId: string;
+ subjects: string[];
+ enrolments: EnrolOpt[];
+ onSaved: (msg: string, ok: boolean) => void;
+}) {
+ const [busy, setBusy] = useState<string | null>(null);
+ const initial = useMemo(() => {
+ const map: Record<string, AccessToggles> = {};
+ const tiersBySubject = new Map<string, string[]>();
+ for (const e of enrolments.filter((x) => x.profile_id === profileId)) {
+ const sub = (e.subject || "").toLowerCase();
+ if (!sub) continue;
+ tiersBySubject.set(sub, [...(tiersBySubject.get(sub) || []), e.tier]);
+ }
+ const keys = new Set(subjects.map((s) => s.toLowerCase()).filter(Boolean));
+ for (const s of tiersBySubject.keys()) keys.add(s);
+ for (const subject of keys) {
+ map[subject] = togglesFromTier(mergeTiers(tiersBySubject.get(subject) || []));
+ }
+ return map;
+ }, [enrolments, profileId, subjects]);
 
-  return (
-    <div style={{ display: "grid", gap: "1.25rem" }}>
-      {msg && (
-        <p
-          className="card"
-          style={{
-            margin: 0,
-            background: "color-mix(in srgb, var(--gold-btn) 28%, white)",
-            color: "var(--bg-navy)",
-            fontWeight: 600,
-          }}
-        >
-          {msg}
-        </p>
-      )}
+ const [local, setLocal] = useState(initial);
+ const rows = Object.keys(local).sort();
 
-      {isAdmin && (
-        <div className="card" style={{ display: "grid", gap: "0.85rem" }}>
-          <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Tutoring pairs</h2>
-          <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
-            Each pair is a tutor ↔ student for private 1-on-1. Schedule them on Calendar (including
-            generate term).
-          </p>
+ async function save(subject: string, next: AccessToggles) {
+ setLocal((prev) => ({ ...prev, [subject]: next }));
+ setBusy(subject);
+ const res = await fetch("/api/admin/set-subject-access", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({
+ profileId,
+ subject,
+ masterclass: next.masterclass,
+ private11: next.private11,
+ }),
+ });
+ const data = await res.json().catch(() => ({}));
+ setBusy(null);
+ if (!res.ok) {
+ setLocal((prev) => ({ ...prev, [subject]: initial[subject] || togglesFromTier(null) }));
+ }
+ onSaved(data.message || data.error || (res.ok ? "Saved" : "Failed"), res.ok);
+ }
 
-          {pairs.length > 0 && (
-            <div className="admin-table-wrap">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Tutor</th>
-                    <th>Student</th>
-                    <th>Subject</th>
-                    <th>Note</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {pairs.map((p) => {
-                    const key = `${p.tutor_id}:${p.student_id}`;
-                    if (editingPair === key) {
-                      return (
-                        <tr key={key}>
-                          <td colSpan={5}>
-                            <form
-                              className="cal-form"
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                const fd = new FormData(e.currentTarget);
-                                post("/api/admin/update-private", {
-                                  tutorId: p.tutor_id,
-                                  studentId: p.student_id,
-                                  newTutorId: fd.get("tutorId"),
-                                  newStudentId: fd.get("studentId"),
-                                  subject: fd.get("subject"),
-                                  note: fd.get("note"),
-                                });
-                              }}
-                            >
-                              <label className="field">
-                                Tutor
-                                <select name="tutorId" defaultValue={p.tutor_id} required>
-                                  {tutors.map((t) => (
-                                    <option key={t.id} value={t.id}>
-                                      {t.full_name || t.email}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <label className="field">
-                                Student
-                                <select name="studentId" defaultValue={p.student_id} required>
-                                  {students.map((s) => (
-                                    <option key={s.id} value={s.id}>
-                                      {s.full_name || s.email}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <label className="field">
-                                Subject
-                                <input name="subject" defaultValue={p.subject} />
-                              </label>
-                              <label className="field">
-                                Note
-                                <input name="note" defaultValue={p.note} />
-                              </label>
-                              <div style={{ display: "flex", gap: "0.5rem" }}>
-                                <button className="btn btn-primary" type="submit">
-                                  Save
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-ghost"
-                                  onClick={() => setEditingPair(null)}
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </form>
-                          </td>
-                        </tr>
-                      );
-                    }
-                    return (
-                      <tr key={key}>
-                        <td>
-                          <strong>{p.tutorLabel}</strong>
-                          <div className="muted" style={{ fontSize: "0.78rem" }}>
-                            {p.tutorEmail}
-                          </div>
-                        </td>
-                        <td>
-                          <strong>{p.studentLabel}</strong>
-                          <div className="muted" style={{ fontSize: "0.78rem" }}>
-                            {p.studentEmail}
-                          </div>
-                        </td>
-                        <td>{p.subject || "—"}</td>
-                        <td>{p.note || "—"}</td>
-                        <td style={{ whiteSpace: "nowrap" }}>
-                          <button
-                            type="button"
-                            className="btn btn-ghost"
-                            style={{ padding: "0.35rem 0.65rem" }}
-                            onClick={() => setEditingPair(key)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost"
-                            style={{ padding: "0.35rem 0.65rem" }}
-                            onClick={() => {
-                              if (confirm(`Unlink ${p.studentLabel} ↔ ${p.tutorLabel}?`)) {
-                                post("/api/admin/delete-private", {
-                                  tutorId: p.tutor_id,
-                                  studentId: p.student_id,
-                                });
-                              }
-                            }}
-                          >
-                            Unlink
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {!pairs.length && <p className="muted">No pairs yet.</p>}
+ if (!rows.length) {
+ return (
+ <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
+ Tick subjects above, save profile, then reopen Edit to set Masterclass / Private 1-1.
+ </p>
+ );
+ }
 
-          <form
-            style={{ display: "grid", gap: "0.65rem" }}
-            onSubmit={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.currentTarget);
-              post("/api/admin/assign-private", {
-                tutorId: fd.get("tutorId"),
-                studentId: fd.get("studentId"),
-                subject: fd.get("subject"),
-                note: fd.get("note"),
-              });
-              e.currentTarget.reset();
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: "0.95rem" }}>Add pair</h3>
-            <label className="field">
-              Tutor
-              <select name="tutorId" required>
-                <option value="">Select…</option>
-                {tutors.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.full_name || t.email} ({t.role})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Student
-              <select name="studentId" required>
-                <option value="">Select…</option>
-                {students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.full_name || s.email}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Subject
-              <input name="subject" placeholder="Methods" />
-            </label>
-            <label className="field">
-              Note
-              <input name="note" placeholder="Weekly Thursday" />
-            </label>
-            <button className="btn btn-primary" type="submit">
-              Link pair
-            </button>
-          </form>
-        </div>
-      )}
+ return (
+ <div className="subject-access-matrix">
+ <p className="subject-access-matrix-label">Subject gated access</p>
+ <ul>
+ {rows.map((subject) => {
+ const label = STUDENT_SUBJECTS.find((s) => s.value === subject)?.label || subject;
+ return (
+ <li key={subject}>
+ <span className="subject-access-name">{label}</span>
+ <AccessTierToggles
+ compact
+ legend=""
+ name=""
+ value={local[subject] || togglesFromTier(null)}
+ onChange={(next) => {
+ if (busy) return;
+ void save(subject, next);
+ }}
+ />
+ {busy === subject && <span className="muted">Saving…</span>}
+ </li>
+ );
+ })}
+ </ul>
+ </div>
+ );
+}
 
-      {isAdmin && (
-        <form
-          className="card"
-          style={{ display: "grid", gap: "0.75rem" }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            post("/api/admin/create-class", {
-              name: fd.get("name"),
-              subject: fd.get("subject"),
-              unitBand: fd.get("unitBand"),
-              yearLabel: fd.get("yearLabel"),
-              stream: fd.get("stream"),
-            });
-            e.currentTarget.reset();
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Create class</h2>
-          <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
-            Use <strong>Masterclass</strong> for the shared Resources library (workbooks/mocks).
-            Private 1-on-1 custom homework is uploaded by tutors on the Private tab — not here.
-          </p>
-          <label className="field">
-            Stream
-            <select name="stream" required defaultValue="masterclass">
-              <option value="masterclass">Masterclass / shared Resources</option>
-              <option value="private">Private (legacy class shell)</option>
-            </select>
-          </label>
-          <label className="field">
-            Name
-            <input name="name" required placeholder="Methods Unit 3&4, Thu" />
-          </label>
-          <label className="field">
-            Subject
-            <select name="subject" required defaultValue="methods">
-              <option value="methods">Methods</option>
-              <option value="specialist">Specialist</option>
-              <option value="chemistry">Chemistry</option>
-              <option value="physics">Physics</option>
-              <option value="literature">Literature</option>
-            </select>
-          </label>
-          <label className="field">
-            Unit band
-            <input name="unitBand" placeholder="Unit 3&4" />
-          </label>
-          <label className="field">
-            Year label
-            <input name="yearLabel" placeholder="Term 1 2027" />
-          </label>
-          <button className="btn btn-primary" type="submit">
-            Create class
-          </button>
-        </form>
-      )}
+function AccessPairsTab({
+ pairs,
+ tutors,
+ students,
+ editingPair,
+ setEditingPair,
+ post,
+}: {
+ pairs: PairOpt[];
+ tutors: ProfileOpt[];
+ students: ProfileOpt[];
+ editingPair: string | null;
+ setEditingPair: (key: string | null) => void;
+ post: (url: string, body: FormData | object) => Promise<boolean>;
+}) {
+ const [filter, setFilter] = useState("");
+ const q = filter.trim().toLowerCase();
+ const visible = q
+ ? pairs.filter((p) =>
+ [p.tutorLabel, p.tutorEmail, p.studentLabel, p.studentEmail, p.subject, p.note]
+ .join(" ")
+ .toLowerCase()
+ .includes(q)
+ )
+ : pairs;
 
-      {isAdmin && (
-        <form
-          className="card"
-          style={{ display: "grid", gap: "0.75rem" }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            post("/api/admin/enrol", {
-              email: fd.get("email"),
-              fullName: fd.get("fullName"),
-              classId: fd.get("classId"),
-              role: fd.get("role"),
-            });
-            e.currentTarget.reset();
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Add student / tutor by email</h2>
-          <label className="field">
-            Email
-            <input name="email" type="email" required placeholder="student@school.edu.au" />
-          </label>
-          <label className="field">
-            Full name
-            <input name="fullName" required placeholder="Alex Student" />
-          </label>
-          <label className="field">
-            Class
-            <select name="classId" required>
-              <option value="">Select…</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            Role
-            <select name="role" defaultValue="student">
-              <option value="student">Student</option>
-              <option value="tutor">Tutor</option>
-            </select>
-          </label>
-          <button className="btn btn-primary" type="submit">
-            Add to class
-          </button>
-          <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
-            They sign in later with this email. Until then a placeholder profile is stored.
-          </p>
-        </form>
-      )}
+ return (
+ <section className="admin-panel">
+ <header className="admin-panel-head">
+ <div>
+ <h2>Private 1-1 pairs</h2>
+ <p className="muted">
+ Link tutor ↔ student. Custom PDFs live on Home → Private 1-1 under each pair. Turn on
+ Private 1-1 gated access under People → Edit.
+ </p>
+ </div>
+ </header>
 
-      <form
-        className="card"
-        style={{ display: "grid", gap: "0.75rem" }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          const fd = new FormData(e.currentTarget);
-          post("/api/admin/upload-set", fd);
-          e.currentTarget.reset();
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Upload set (PDF only)</h2>
-        <label className="field">
-          Class
-          <select name="classId" required>
-            <option value="">Select…</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          Code
-          <input name="code" required placeholder="1.1" />
-        </label>
-        <label className="field">
-          Title
-          <input name="title" required placeholder="Discovering e" />
-        </label>
-        <label className="field">
-          Section
-          <select name="section" defaultValue="workbooks">
-            <option value="workbooks">Workbooks</option>
-            <option value="homework">Homework</option>
-            <option value="mocks">Mock exams</option>
-          </select>
-        </label>
-        <label className="field">
-          Workbook PDF
-          <input name="workbook" type="file" accept="application/pdf" required />
-        </label>
-        <label className="field">
-          Solutions PDF (optional)
-          <input name="solutions" type="file" accept="application/pdf" />
-        </label>
-        <label className="field">
-          Homework PDF (optional)
-          <input name="homework" type="file" accept="application/pdf" />
-        </label>
-        <button className="btn btn-primary" type="submit">
-          Upload &amp; publish
-        </button>
-      </form>
+ <form
+ className="admin-form-grid pair-create-form"
+ onSubmit={(e) => {
+ e.preventDefault();
+ const fd = new FormData(e.currentTarget);
+ post("/api/admin/assign-private", {
+ tutorId: fd.get("tutorId"),
+ studentId: fd.get("studentId"),
+ subject: fd.get("subject"),
+ note: fd.get("note"),
+ });
+ e.currentTarget.reset();
+ }}
+ >
+ <h3 className="admin-subhead">New pair</h3>
+ <label className="field">
+ Tutor
+ <select name="tutorId" required>
+ <option value="">Select tutor…</option>
+ {tutors.map((t) => (
+ <option key={t.id} value={t.id}>
+ {t.full_name || t.email}
+ </option>
+ ))}
+ </select>
+ </label>
+ <label className="field">
+ Student
+ <select name="studentId" required>
+ <option value="">Select student…</option>
+ {students.map((s) => (
+ <option key={s.id} value={s.id}>
+ {s.full_name || s.email}
+ </option>
+ ))}
+ </select>
+ </label>
+ <label className="field">
+ Subject
+ <select name="subject" defaultValue="methods">
+ {STUDENT_SUBJECTS.map((s) => (
+ <option key={s.value} value={s.value}>
+ {s.label}
+ </option>
+ ))}
+ </select>
+ </label>
+ <label className="field">
+ Note
+ <input name="note" placeholder="Weekly Thursday" />
+ </label>
+ <button className="btn btn-primary" type="submit">
+ Link pair
+ </button>
+ </form>
 
-      {isAdmin && (
-        <div className="card">
-          <h2 style={{ margin: "0 0 0.75rem", fontSize: "1.05rem" }}>People</h2>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {profiles.map((p) =>
-                  editingPerson === p.id ? (
-                    <tr key={p.id}>
-                      <td colSpan={4}>
-                        <form
-                          className="cal-form"
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            const fd = new FormData(e.currentTarget);
-                            post("/api/admin/update-person", {
-                              id: p.id,
-                              fullName: fd.get("fullName"),
-                              role: fd.get("role"),
-                            });
-                          }}
-                        >
-                          <label className="field">
-                            Full name
-                            <input name="fullName" defaultValue={p.full_name} required />
-                          </label>
-                          <label className="field">
-                            Role
-                            <select name="role" defaultValue={p.role === "unverified" ? "unverified" : p.role}>
-                              <option value="unverified">(unverified login)</option>
-                              <option value="student">Student</option>
-                              <option value="tutor">Tutor</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          </label>
-                          <div style={{ display: "flex", gap: "0.5rem" }}>
-                            <button className="btn btn-primary" type="submit">
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost"
-                              onClick={() => setEditingPerson(null)}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </form>
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr key={p.id}>
-                      <td>{p.full_name || "—"}</td>
-                      <td>{p.email}</td>
-                      <td
-                        style={{
-                          textTransform: p.role === "unverified" ? "none" : "capitalize",
-                          color: p.role === "unverified" ? "#9a3412" : undefined,
-                          fontWeight: p.role === "unverified" ? 700 : undefined,
-                        }}
-                      >
-                        {roleLabel(p.role)}
-                      </td>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <button
-                          type="button"
-                          className="btn btn-ghost"
-                          style={{ padding: "0.35rem 0.65rem" }}
-                          onClick={() => setEditingPerson(p.id)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-ghost"
-                          style={{ padding: "0.35rem 0.65rem" }}
-                          onClick={() => {
-                            if (
-                              confirm(
-                                `Delete ${p.full_name || p.email}? This removes their login and enrolments.`
-                              )
-                            ) {
-                              post("/api/admin/delete-person", { id: p.id });
-                            }
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
-          {!profiles.length && <p className="muted">No people yet.</p>}
-        </div>
-      )}
-    </div>
-  );
+ {pairs.length > 3 && (
+ <label className="field">
+ Filter pairs
+ <input
+ type="search"
+ value={filter}
+ onChange={(e) => setFilter(e.target.value)}
+ placeholder="Name, email, subject…"
+ />
+ </label>
+ )}
+
+ {visible.length > 0 ? (
+ <div className="pair-card-grid">
+ {visible.map((p) => {
+ const key = `${p.tutor_id}:${p.student_id}`;
+ if (editingPair === key) {
+ return (
+ <form
+ key={key}
+ className="pair-card pair-card-edit"
+ onSubmit={(e) => {
+ e.preventDefault();
+ const fd = new FormData(e.currentTarget);
+ post("/api/admin/update-private", {
+ tutorId: p.tutor_id,
+ studentId: p.student_id,
+ newTutorId: fd.get("tutorId"),
+ newStudentId: fd.get("studentId"),
+ subject: fd.get("subject"),
+ note: fd.get("note"),
+ });
+ }}
+ >
+ <label className="field">
+ Tutor
+ <select name="tutorId" defaultValue={p.tutor_id} required>
+ {tutors.map((t) => (
+ <option key={t.id} value={t.id}>
+ {t.full_name || t.email}
+ </option>
+ ))}
+ </select>
+ </label>
+ <label className="field">
+ Student
+ <select name="studentId" defaultValue={p.student_id} required>
+ {students.map((s) => (
+ <option key={s.id} value={s.id}>
+ {s.full_name || s.email}
+ </option>
+ ))}
+ </select>
+ </label>
+ <label className="field">
+ Subject
+ <select name="subject" defaultValue={p.subject || "methods"}>
+ {STUDENT_SUBJECTS.map((s) => (
+ <option key={s.value} value={s.value}>
+ {s.label}
+ </option>
+ ))}
+ </select>
+ </label>
+ <label className="field">
+ Note
+ <input name="note" defaultValue={p.note} />
+ </label>
+ <div className="admin-edit-actions">
+ <button className="btn btn-primary btn-compact" type="submit">
+ Save
+ </button>
+ <button
+ type="button"
+ className="btn btn-ghost btn-compact"
+ onClick={() => setEditingPair(null)}
+ >
+ Cancel
+ </button>
+ </div>
+ </form>
+ );
+ }
+ return (
+ <article key={key} className="pair-card">
+ <div className="pair-card-main">
+ <p className="pair-card-names">
+ <strong>{p.tutorLabel}</strong>
+ <span aria-hidden="true"> ↔ </span>
+ <strong>{p.studentLabel}</strong>
+ </p>
+ <p className="muted pair-card-meta">
+ {[p.subject, p.note].filter(Boolean).join(" · ") || "No subject set"}
+ </p>
+ <p className="muted" style={{ fontSize: "0.78rem", margin: 0 }}>
+ {p.tutorEmail} · {p.studentEmail}
+ </p>
+ </div>
+ <div className="pair-card-actions">
+ <button
+ type="button"
+ className="btn btn-ghost btn-compact"
+ onClick={() => setEditingPair(key)}
+ >
+ Edit
+ </button>
+ <button
+ type="button"
+ className="btn btn-ghost btn-compact"
+ onClick={() => {
+ if (confirm(`Unlink ${p.studentLabel} ↔ ${p.tutorLabel}?`)) {
+ post("/api/admin/delete-private", {
+ tutorId: p.tutor_id,
+ studentId: p.student_id,
+ });
+ }
+ }}
+ >
+ Unlink
+ </button>
+ </div>
+ </article>
+ );
+ })}
+ </div>
+ ) : (
+ <p className="muted">{pairs.length ? "No pairs match that filter." : "No pairs yet."}</p>
+ )}
+ </section>
+ );
+}
+
+function AccessBadge({ profileId, enrolments }: { profileId: string; enrolments: EnrolOpt[] }) {
+ const tiers = enrolments.filter((e) => e.profile_id === profileId).map((e) => e.tier);
+ const merged = mergeTiers(tiers);
+ const pills = accessPills(merged);
+ if (!pills.length) return <span className="muted">-</span>;
+ return (
+ <span className="access-pill-row">
+ {pills.map((p) => (
+ <span key={p} className="access-pill">
+ {p}
+ </span>
+ ))}
+ </span>
+ );
+}
+
+export function AdminForms({
+ isAdmin,
+ classes,
+ profiles,
+ pairs,
+ enrolments,
+}: {
+ isAdmin: boolean;
+ classes: ClassOpt[];
+ profiles: ProfileOpt[];
+ pairs: PairOpt[];
+ enrolments: EnrolOpt[];
+}) {
+ const router = useRouter();
+ const [tab, setTab] = useState<AdminTab>("people");
+ const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+ const [editingPerson, setEditingPerson] = useState<string | null>(null);
+ const [editingPair, setEditingPair] = useState<string | null>(null);
+ const [enrollingId, setEnrollingId] = useState<string | null>(null);
+ const [addAccess, setAddAccess] = useState<AccessToggles>({
+ masterclass: true,
+ private11: false,
+ });
+ const [authAccess, setAuthAccess] = useState<AccessToggles>({
+ masterclass: true,
+ private11: false,
+ });
+
+ const tutors = profiles.filter((p) => p.role === "tutor" || p.role === "admin");
+ const students = profiles.filter((p) => p.role === "student" || p.role === "admin");
+ const pendingCount = profiles.filter((p) => p.role === "unverified").length;
+ const masterClasses = classes.filter((c) => (c.stream || "masterclass") === "masterclass");
+
+ function roleLabel(role: string) {
+ if (role === "unverified") return "Unauthorised";
+ return role;
+ }
+
+ async function post(url: string, body: FormData | object) {
+ setMsg(null);
+ const res = await fetch(url, {
+ method: "POST",
+ body: body instanceof FormData ? body : JSON.stringify(body),
+ headers: body instanceof FormData ? undefined : { "Content-Type": "application/json" },
+ });
+ const data = await res.json().catch(() => ({}));
+ if (!res.ok) {
+ setMsg({ text: data.error || "Something went wrong", ok: false });
+ return false;
+ }
+ setMsg({ text: data.message || "Saved", ok: true });
+ setEditingPerson(null);
+ setEditingPair(null);
+ setEnrollingId(null);
+ void router.refresh();
+ return true;
+ }
+
+ const tabs: { id: AdminTab; label: string; hint?: string }[] = [
+ { id: "people", label: "People", hint: pendingCount ? `${pendingCount} pending` : undefined },
+ { id: "access", label: "Access" },
+ { id: "resources", label: "Resources" },
+ { id: "classes", label: "Classes" },
+ ];
+
+ return (
+ <div className="admin-console">
+ {msg && (
+ <p className={`admin-toast${msg.ok ? "" : " admin-toast-error"}`} role="status">
+ {msg.text}
+ </p>
+ )}
+
+ <div className="segmented admin-tabs" role="tablist" aria-label="Admin sections">
+ {tabs.map((t) => (
+ <button
+ key={t.id}
+ type="button"
+ role="tab"
+ className="segmented-item"
+ data-active={tab === t.id}
+ aria-selected={tab === t.id}
+ onClick={() => setTab(t.id)}
+ >
+ {t.label}
+ {t.hint ? <span className="segmented-badge">{t.hint}</span> : null}
+ </button>
+ ))}
+ </div>
+
+ {tab === "people" && isAdmin && (
+ <div className="admin-panel-stack">
+ <section className="admin-panel">
+ <header className="admin-panel-head">
+ <div>
+ <h2>Add by email</h2>
+ <p className="muted">
+ Creates an authorised profile for that email. Class library is optional — leave empty for
+ Progress-only until you assign Masterclass or Private.
+ </p>
+ </div>
+ </header>
+ <form
+ className="admin-form-grid"
+ onSubmit={(e) => {
+ e.preventDefault();
+ const fd = new FormData(e.currentTarget);
+ post("/api/admin/enrol", {
+ email: fd.get("email"),
+ fullName: fd.get("fullName"),
+ classId: fd.get("classId"),
+ role: fd.get("role"),
+ tier: tierFromToggles(addAccess) || "masterclass",
+ yearLevel: fd.get("yearLevel"),
+ yearLevelOther: fd.get("yearLevelOther"),
+ subjects: fd.getAll("subjects"),
+ subjectsOther: fd.get("subjectsOther"),
+ });
+ e.currentTarget.reset();
+ setAddAccess({ masterclass: true, private11: false });
+ }}
+ >
+ <label className="field">
+ Email
+ <input name="email" type="email" required placeholder="student@school.edu.au" />
+ </label>
+ <label className="field">
+ Full name
+ <input name="fullName" required placeholder="Alex Student" />
+ </label>
+ <label className="field">
+ Class library <span className="muted">(optional)</span>
+ <select name="classId" defaultValue="">
+ <option value="">None yet — Progress only</option>
+ {masterClasses.map((c) => (
+ <option key={c.id} value={c.id}>
+ {c.name}
+ </option>
+ ))}
+ </select>
+ </label>
+ <RoleAndStudentFields
+ label="Role"
+ defaultRole="student"
+ options={[
+ { value: "student", label: "Student" },
+ { value: "tutor", label: "Tutor" },
+ ]}
+ />
+ <AccessTierToggles value={addAccess} onChange={setAddAccess} />
+ <button className="btn btn-primary" type="submit">
+ Authorise email
+ </button>
+ </form>
+ </section>
+
+ <section className="admin-panel">
+ <header className="admin-panel-head">
+ <div>
+ <h2>Directory</h2>
+ <p className="muted">
+ Unauthorised sign-ups stay red until you Enrol. Pick a class library when you Enrol so
+ gated resources unlock; otherwise they get Progress tools only.
+ </p>
+ </div>
+ {pendingCount > 0 && (
+ <span className="admin-unauth-count">{pendingCount} unauthorised</span>
+ )}
+ </header>
+
+ <div className="admin-table-wrap">
+ <table className="admin-table">
+ <thead>
+ <tr>
+ <th>Name</th>
+ <th>Email</th>
+ <th>Role</th>
+ <th>Year</th>
+ <th>Subjects</th>
+ <th>Access</th>
+ <th />
+ </tr>
+ </thead>
+ <tbody>
+ {profiles.map((p) => {
+ const unauth = p.role === "unverified";
+ const isStudent = p.role === "student";
+
+ if (editingPerson === p.id && !unauth) {
+ return (
+ <tr key={p.id}>
+ <td colSpan={7}>
+ <form
+ className="admin-edit-panel"
+ onSubmit={(e) => {
+ e.preventDefault();
+ const fd = new FormData(e.currentTarget);
+ post("/api/admin/update-person", {
+ id: p.id,
+ fullName: fd.get("fullName"),
+ role: fd.get("role"),
+ yearLevel: fd.get("yearLevel"),
+ yearLevelOther: fd.get("yearLevelOther"),
+ subjects: fd.getAll("subjects"),
+ subjectsOther: fd.get("subjectsOther"),
+ });
+ }}
+ >
+ <label className="field">
+ Full name
+ <input name="fullName" defaultValue={p.full_name} required />
+ </label>
+ <RoleAndStudentFields
+ defaultRole={p.role}
+ yearLevel={p.year_level}
+ subjects={p.subjects}
+ options={[
+ { value: "student", label: "Student" },
+ { value: "tutor", label: "Tutor" },
+ { value: "admin", label: "Admin" },
+ ]}
+ />
+ {isStudent && (
+ <SubjectAccessMatrix
+ key={`${p.id}:${enrolments
+ .filter((e) => e.profile_id === p.id)
+ .map((e) => `${e.subject}:${e.tier}`)
+ .join("|")}`}
+ profileId={p.id}
+ subjects={p.subjects || []}
+ enrolments={enrolments}
+ onSaved={(text, ok) => {
+ setMsg({ text, ok });
+ if (ok) void router.refresh();
+ }}
+ />
+ )}
+ <div className="admin-edit-actions">
+ <button className="btn btn-primary" type="submit">
+ Save profile
+ </button>
+ <button
+ type="button"
+ className="btn btn-ghost"
+ onClick={() => setEditingPerson(null)}
+ >
+ Cancel
+ </button>
+ </div>
+ </form>
+ </td>
+ </tr>
+ );
+ }
+
+ if (unauth) {
+ return (
+ <tr key={p.id} className="admin-person-unauth">
+ <td colSpan={7}>
+ <div className="admin-unauth-block">
+ <div>
+ <strong>{p.full_name || "-"}</strong>
+ <div className="muted" style={{ fontSize: "0.85rem" }}>
+ {p.email}
+ </div>
+ <span className="admin-unauth-label">Unauthorised</span>
+ </div>
+ <form
+ className="admin-unauth-enrol"
+ onSubmit={async (e) => {
+ e.preventDefault();
+ const fd = new FormData(e.currentTarget);
+ setEnrollingId(p.id);
+ const ok = await post("/api/admin/authorize", {
+ id: p.id,
+ role: fd.get("role"),
+ fullName: p.full_name,
+ classId: fd.get("classId"),
+ tier: tierFromToggles(authAccess) || "masterclass",
+ yearLevel: fd.get("yearLevel"),
+ yearLevelOther: fd.get("yearLevelOther"),
+ subjects: fd.getAll("subjects"),
+ subjectsOther: fd.get("subjectsOther"),
+ });
+ if (ok) setAuthAccess({ masterclass: true, private11: false });
+ if (!ok) setEnrollingId(null);
+ }}
+ >
+ <RoleAndStudentFields
+ defaultRole="student"
+ options={[
+ { value: "student", label: "Student" },
+ { value: "tutor", label: "Tutor" },
+ { value: "admin", label: "Admin" },
+ ]}
+ />
+ <label className="field">
+ Class library <span className="muted">(optional)</span>
+ <select name="classId" defaultValue="">
+ <option value="">None yet — Progress only</option>
+ {masterClasses.map((c) => (
+ <option key={c.id} value={c.id}>
+ {c.name}
+ </option>
+ ))}
+ </select>
+ </label>
+ <AccessTierToggles
+ value={authAccess}
+ onChange={setAuthAccess}
+ legend="Gated access (if class selected)"
+ compact
+ />
+ <div className="admin-enrol-row">
+ <button
+ className="btn btn-primary"
+ type="submit"
+ disabled={enrollingId === p.id}
+ >
+ {enrollingId === p.id ? "Enrolling…" : "Enrol"}
+ </button>
+ <button
+ type="button"
+ className="btn btn-ghost"
+ disabled={enrollingId === p.id}
+ onClick={() => {
+ if (
+ confirm(
+ `Reject and delete ${p.full_name || p.email}? They can sign up again later.`
+ )
+ ) {
+ post("/api/admin/delete-person", { id: p.id });
+ }
+ }}
+ >
+ Delete
+ </button>
+ </div>
+ </form>
+ </div>
+ </td>
+ </tr>
+ );
+ }
+
+ return (
+ <tr key={p.id}>
+ <td>{p.full_name || "-"}</td>
+ <td>{p.email}</td>
+ <td style={{ textTransform: "capitalize" }}>{roleLabel(p.role)}</td>
+ <td>{isStudent ? formatYearLevel(p.year_level) : "-"}</td>
+ <td>{isStudent ? formatSubjects(p.subjects) : "-"}</td>
+ <td>
+ {isStudent ? (
+ <AccessBadge profileId={p.id} enrolments={enrolments} />
+ ) : (
+ "-"
+ )}
+ </td>
+ <td style={{ whiteSpace: "nowrap" }}>
+ <button
+ type="button"
+ className="btn btn-ghost btn-compact"
+ onClick={() => setEditingPerson(p.id)}
+ >
+ Edit
+ </button>
+ <button
+ type="button"
+ className="btn btn-ghost btn-compact"
+ onClick={() => {
+ if (
+ confirm(
+ `Delete ${p.full_name || p.email}? This removes their login and enrolments.`
+ )
+ ) {
+ post("/api/admin/delete-person", { id: p.id });
+ }
+ }}
+ >
+ Delete
+ </button>
+ </td>
+ </tr>
+ );
+ })}
+ </tbody>
+ </table>
+ </div>
+ {!profiles.length && <p className="muted">No people yet.</p>}
+ </section>
+ </div>
+ )}
+
+ {tab === "access" && isAdmin && (
+ <AccessPairsTab
+ pairs={pairs}
+ tutors={tutors}
+ students={students}
+ editingPair={editingPair}
+ setEditingPair={setEditingPair}
+ post={post}
+ />
+ )}
+
+ {tab === "resources" && (
+ <section className="admin-panel">
+ <header className="admin-panel-head">
+ <div>
+ <h2>Upload resource set</h2>
+ <p className="muted">
+ PDFs for a masterclass library. Workbooks are core; solutions stay gated for Private
+ 1-1 until a tutor releases them.
+ </p>
+ </div>
+ </header>
+ <form
+ className="admin-form-grid"
+ onSubmit={(e) => {
+ e.preventDefault();
+ const fd = new FormData(e.currentTarget);
+ post("/api/admin/upload-set", fd);
+ e.currentTarget.reset();
+ }}
+ >
+ <label className="field">
+ Class
+ <select name="classId" required>
+ <option value="">Select…</option>
+ {masterClasses.map((c) => (
+ <option key={c.id} value={c.id}>
+ {c.name}
+ </option>
+ ))}
+ </select>
+ </label>
+ <label className="field">
+ Code
+ <input name="code" required placeholder="1.1" />
+ </label>
+ <label className="field">
+ Title
+ <input name="title" required placeholder="Discovering e" />
+ </label>
+ <label className="field">
+ Section
+ <select name="section" defaultValue="workbooks">
+ <option value="workbooks">Workbooks</option>
+ <option value="homework">Homework</option>
+ <option value="mocks">Mock exams</option>
+ </select>
+ </label>
+ <label className="field">
+ Workbook PDF
+ <input name="workbook" type="file" accept="application/pdf" required />
+ </label>
+ <label className="field">
+ Solutions PDF (optional)
+ <input name="solutions" type="file" accept="application/pdf" />
+ </label>
+ <label className="field">
+ Homework PDF (optional)
+ <input name="homework" type="file" accept="application/pdf" />
+ </label>
+ <button className="btn btn-primary" type="submit">
+ Upload &amp; publish
+ </button>
+ </form>
+ </section>
+ )}
+
+ {tab === "classes" && isAdmin && (
+ <section className="admin-panel">
+ <header className="admin-panel-head">
+ <div>
+ <h2>Create class</h2>
+ <p className="muted">
+ Masterclass classes power the shared Resources library. Private homework stays on the
+ Private tab for tutors.
+ </p>
+ </div>
+ </header>
+ <form
+ className="admin-form-grid"
+ onSubmit={(e) => {
+ e.preventDefault();
+ const fd = new FormData(e.currentTarget);
+ post("/api/admin/create-class", {
+ name: fd.get("name"),
+ subject: fd.get("subject"),
+ unitBand: fd.get("unitBand"),
+ yearLabel: fd.get("yearLabel"),
+ stream: fd.get("stream"),
+ });
+ e.currentTarget.reset();
+ }}
+ >
+ <label className="field">
+ Stream
+ <select name="stream" required defaultValue="masterclass">
+ <option value="masterclass">Masterclass / shared Resources</option>
+ <option value="private">Private (legacy class shell)</option>
+ </select>
+ </label>
+ <label className="field">
+ Name
+ <input name="name" required placeholder="Methods Unit 3&4, Thu" />
+ </label>
+ <label className="field">
+ Subject
+ <select name="subject" required defaultValue="methods">
+ {STUDENT_SUBJECTS.map((s) => (
+ <option key={s.value} value={s.value}>
+ {s.label}
+ </option>
+ ))}
+ </select>
+ </label>
+ <label className="field">
+ Unit band
+ <input name="unitBand" placeholder="Unit 3&4" />
+ </label>
+ <label className="field">
+ Year label
+ <input name="yearLabel" placeholder="Term 1 2027" />
+ </label>
+ <button className="btn btn-primary" type="submit">
+ Create class
+ </button>
+ </form>
+
+ {classes.length > 0 && (
+ <div className="admin-class-list">
+ <h3 className="admin-subhead">Existing classes</h3>
+ <ul>
+ {classes.map((c) => (
+ <li key={c.id}>
+ <strong>{c.name}</strong>
+ <span className="muted">
+ {" "}
+ · {c.subject}
+ {c.unit_band ? ` · ${c.unit_band}` : ""}
+ {c.stream ? ` · ${c.stream}` : ""}
+ </span>
+ </li>
+ ))}
+ </ul>
+ </div>
+ )}
+ </section>
+ )}
+ </div>
+ );
 }

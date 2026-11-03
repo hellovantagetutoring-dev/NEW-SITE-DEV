@@ -29,11 +29,13 @@ export async function POST(request: Request) {
     }
   }
 
+  // Delete auth user (cascades profile). Don't block on a second round-trip if cascade worked.
   const { error: authErr } = await service.auth.admin.deleteUser(id);
   if (authErr) {
-    // Fallback: delete profile row (cascade) if auth user missing
     const { error } = await service.from("profiles").delete().eq("id", id);
-    if (error) return NextResponse.json({ error: authErr.message || error.message }, { status: 500 });
+    if (error) {
+      return NextResponse.json({ error: authErr.message || error.message }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ message: "Person deleted" });

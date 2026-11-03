@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { updateProfileAdmin } from "@/lib/admin-profile-update";
 import { getProfile } from "@/lib/auth";
+import { normalizeSubjects, normalizeYearLevel } from "@/lib/student-fields";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -11,15 +13,18 @@ export async function POST(request: Request) {
   const body = await request.json();
   const email = String(body.email || "").trim().toLowerCase();
   const fullName = String(body.fullName || "").trim();
-  const classId = String(body.classId || "");
+  const classId = String(body.classId || "").trim();
   const role = body.role === "tutor" ? "tutor" : "student";
-  if (!email || !fullName || !classId) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  if (!email || !fullName) {
+    return NextResponse.json({ error: "Email and full name are required" }, { status: 400 });
   }
+
+  const isStudent = role === "student";
+  const year_level = isStudent ? normalizeYearLevel(body.yearLevel, body.yearLevelOther) : "";
+  const subjects = isStudent ? normalizeSubjects(body.subjects, body.subjectsOther) : [];
 
   const service = createServiceClient();
 
-  // Find existing profile by email, or create auth invite user
   const { data: existing } = await service
     .from("profiles")
     .select("id, role")
@@ -41,24 +46,61 @@ export async function POST(request: Request) {
       );
     }
     userId = created.user.id;
-    await service.from("profiles").upsert({
+    const row = {
       id: userId,
       email,
       full_name: fullName,
       role,
+      year_level,
+      subjects,
+    };
+    let { error: upsertErr } = await service.from("profiles").upsert(row);
+    if (upsertErr && /year_level|subjects|schema cache/i.test(upsertErr.message)) {
+      const base = { id: row.id, email: row.email, full_name: row.full_name, role: row.role };
+      ({ error: upsertErr } = await service.from("profiles").upsert(base));
+    }
+    if (upsertErr) {
+      return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+    }
+  } else {
+    const nextRole = existing?.role === "admin" ? "admin" : role;
+    const err = await updateProfileAdmin(service, userId, {
+      full_name: fullName,
+      role: nextRole,
+      ...(nextRole === "student"
+        ? { year_level, subjects }
+        : { year_level: "", subjects: [] }),
     });
-  } else {
-    await service
-      .from("profiles")
-      .update({ full_name: fullName, role: existing?.role === "admin" ? "admin" : role })
-      .eq("id", userId);
+    if (err) return NextResponse.json({ error: err }, { status: 500 });
   }
 
-  if (role === "tutor") {
-    await service.from("class_tutors").upsert({ class_id: classId, profile_id: userId });
-  } else {
-    await service.from("enrolments").upsert({ class_id: classId, profile_id: userId });
+  if (classId) {
+    if (role === "tutor") {
+      const { error: tutorErr } = await service
+        .from("class_tutors")
+        .upsert({ class_id: classId, profile_id: userId });
+      if (tutorErr) return NextResponse.json({ error: tutorErr.message }, { status: 500 });
+    } else {
+      const tierRaw = String(body.tier || "masterclass");
+      const tier =
+        tierRaw === "private_1on1" || tierRaw === "both" || tierRaw === "masterclass"
+          ? tierRaw
+          : "masterclass";
+      const enrolRow = { class_id: classId, profile_id: userId, tier };
+      let { error: enrolErr } = await service.from("enrolments").upsert(enrolRow);
+      if (enrolErr && /tier|schema cache/i.test(enrolErr.message)) {
+        ({ error: enrolErr } = await service
+          .from("enrolments")
+          .upsert({ class_id: classId, profile_id: userId }));
+      }
+      if (enrolErr) return NextResponse.json({ error: enrolErr.message }, { status: 500 });
+    }
+    return NextResponse.json({ message: `Added ${email} to class` });
   }
 
-  return NextResponse.json({ message: `Added ${email} to class` });
+  return NextResponse.json({
+    message: `Authorised ${email} as ${role}${
+      role === "student" ? " (Progress open; assign a class or Private pair for gated resources)" : ""
+    }`,
+  });
 }

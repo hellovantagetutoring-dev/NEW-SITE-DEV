@@ -11,21 +11,27 @@ export default async function AdminPage() {
   const supabase = await createClient();
   const { data: classes } = await supabase
     .from("classes")
-    .select("id, name, subject, unit_band")
+    .select("id, name, subject, unit_band, stream")
     .order("name");
 
-  const { data: profilesRaw } = await supabase
+  const firstProfiles = await supabase
     .from("profiles")
-    .select("id, email, full_name, role")
+    .select("id, email, full_name, role, year_level, subjects")
     .order("email")
     .limit(200);
-  // Surface unverified (cold / unauthorised) logins first for Admin review
-  const profiles = [...(profilesRaw || [])].sort((a, b) => {
-    const au = a.role === "unverified" ? 0 : 1;
-    const bu = b.role === "unverified" ? 0 : 1;
-    if (au !== bu) return au - bu;
-    return a.email.localeCompare(b.email);
-  });
+  let profilesRaw = firstProfiles.data;
+  if (firstProfiles.error) {
+    const fallback = await supabase
+      .from("profiles")
+      .select("id, email, full_name, role")
+      .order("email")
+      .limit(200);
+    profilesRaw = (fallback.data || []).map((p) => ({
+      ...p,
+      year_level: "",
+      subjects: [] as string[],
+    }));
+  }
 
   const { data: pairsRaw } = await supabase
     .from("private_assignments")
@@ -49,19 +55,65 @@ export default async function AdminPage() {
     };
   });
 
+  type EnrolRow = {
+    profile_id: string;
+    class_id: string;
+    tier?: string;
+    classes?:
+      | { id: string; subject: string; stream: string; name: string }
+      | { id: string; subject: string; stream: string; name: string }[]
+      | null;
+  };
+
+  const enrolQuery = await supabase
+    .from("enrolments")
+    .select("profile_id, class_id, tier, classes:class_id (id, subject, stream, name)");
+  let enrolmentRows: EnrolRow[] = (enrolQuery.data || []) as EnrolRow[];
+  if (enrolQuery.error) {
+    const fallback = await supabase.from("enrolments").select("profile_id, class_id");
+    enrolmentRows = (fallback.data || []).map((e) => ({
+      profile_id: e.profile_id,
+      class_id: e.class_id,
+      tier: "masterclass",
+      classes: null,
+    }));
+  }
+
+  const enrolments = enrolmentRows.map((e) => {
+    const klass = Array.isArray(e.classes) ? e.classes[0] : e.classes;
+    return {
+      profile_id: e.profile_id,
+      class_id: e.class_id,
+      tier: e.tier || "masterclass",
+      subject: klass?.subject || "",
+      stream: klass?.stream || "masterclass",
+      className: klass?.name || "",
+    };
+  });
+
+  // Keep role as stored: Progress-only students (no class/private yet) stay "student",
+  // not remapped to unverified — that was undoing Admin → Enrol for new emails.
+  const profiles = [...(profilesRaw || [])].sort((a, b) => {
+    const au = a.role === "unverified" ? 0 : 1;
+    const bu = b.role === "unverified" ? 0 : 1;
+    if (au !== bu) return au - bu;
+    return a.email.localeCompare(b.email);
+  });
+
   return (
     <>
       <p className="section-kicker">Operations</p>
       <h1 className="section-title">Admin</h1>
-      <p className="muted" style={{ marginBottom: "1.25rem" }}>
-        Manage people and tutoring pairs here. Use Calendar to add sessions, generate a QLD term, or
-        approve change requests. Tutors cannot upload or release PDFs.
+      <p className="muted admin-lead">
+        People for membership and gated access. Access for pairs. Resources for uploads. Classes for
+        subject libraries.
       </p>
       <AdminForms
         isAdmin={profile.role === "admin"}
         classes={classes || []}
         profiles={profiles || []}
         pairs={pairs}
+        enrolments={enrolments}
       />
     </>
   );

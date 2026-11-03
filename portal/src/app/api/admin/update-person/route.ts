@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { updateProfileAdmin } from "@/lib/admin-profile-update";
 import { getProfile } from "@/lib/auth";
+import { normalizeSubjects, normalizeYearLevel } from "@/lib/student-fields";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -29,11 +31,19 @@ export async function POST(request: Request) {
     }
   }
 
-  const { error } = await service
-    .from("profiles")
-    .update({ full_name: fullName, role })
-    .eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const isStudent = role === "student";
+  const err = await updateProfileAdmin(service, id, {
+    full_name: fullName,
+    role,
+    ...(isStudent
+      ? {
+          year_level: normalizeYearLevel(body.yearLevel, body.yearLevelOther),
+          subjects: normalizeSubjects(body.subjects, body.subjectsOther),
+        }
+      : { year_level: "", subjects: [] }),
+  });
+
+  if (err) return NextResponse.json({ error: err }, { status: 500 });
 
   return NextResponse.json({ message: "Person updated" });
 }

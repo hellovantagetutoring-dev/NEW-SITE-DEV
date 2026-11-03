@@ -1,196 +1,285 @@
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardTabs } from "./DashboardTabs";
+import { DashboardTabs, type ProgramAccess } from "./DashboardTabs";
 import { TutorCreateSession } from "./TutorCreateSession";
 
+function isUcatSubject(subject: string | null | undefined) {
+ return (subject || "").toLowerCase() === "ucat";
+}
+
 export default async function DashboardPage() {
-  const profile = await getProfile();
-  if (!profile) redirect("/login");
-  if (profile.role === "unverified") redirect("/not-enrolled");
+ const profile = await getProfile();
+ if (!profile) redirect("/login");
 
-  const supabase = await createClient();
+ const supabase = await createClient();
+ const pendingAccess = profile.role === "unverified";
 
-  if (profile.role === "student") {
-    const { data: enrolments } = await supabase
-      .from("enrolments")
-      .select("class_id")
-      .eq("profile_id", profile.id);
-    const { data: privateLinks } = await supabase
-      .from("private_assignments")
-      .select("tutor_id")
-      .eq("student_id", profile.id);
-    if (!enrolments?.length && !privateLinks?.length) redirect("/not-enrolled");
-  }
+ const { data: resourceClasses } = await supabase
+ .from("classes")
+ .select("id, name, subject, unit_band, year_label, stream")
+ .eq("stream", "masterclass")
+ .order("name");
 
-  const { data: resourceClasses } = await supabase
-    .from("classes")
-    .select("id, name, subject, unit_band, year_label, stream")
-    .eq("stream", "masterclass")
-    .order("name");
+ const allClasses = resourceClasses || [];
+ const masterclassClasses = allClasses.filter((c) => !isUcatSubject(c.subject));
+ const ucatClasses = allClasses.filter((c) => isUcatSubject(c.subject));
 
-  let masterClassIds: string[] = [];
-  if (profile.role === "student") {
-    const { data: enrolments } = await supabase
-      .from("enrolments")
-      .select("class_id")
-      .eq("profile_id", profile.id);
-    masterClassIds = (enrolments || []).map((e) => e.class_id);
-  } else if (profile.role === "tutor") {
-    const { data: tutored } = await supabase
-      .from("class_tutors")
-      .select("class_id")
-      .eq("profile_id", profile.id);
-    masterClassIds = (tutored || []).map((t) => t.class_id);
-  } else if (profile.role === "admin") {
-    masterClassIds = (resourceClasses || []).map((c) => c.id);
-  }
+ type EnrolDetail = {
+ class_id: string;
+ tier?: string | null;
+ subject: string;
+ };
 
-  const now = new Date().toISOString();
-  let masterSessions: {
-    id: string;
-    title: string;
-    starts_at: string;
-    ends_at: string;
-    location_or_link: string;
-    class_id: string | null;
-  }[] = [];
+ let enrolDetails: EnrolDetail[] = [];
+ if (profile.role === "student" || profile.role === "unverified") {
+ const withTier = await supabase
+ .from("enrolments")
+ .select("class_id, tier, classes:class_id (subject)")
+ .eq("profile_id", profile.id);
+ if (withTier.error) {
+ const fallback = await supabase
+ .from("enrolments")
+ .select("class_id, classes:class_id (subject)")
+ .eq("profile_id", profile.id);
+ enrolDetails = (fallback.data || []).map((e) => {
+ const klass = Array.isArray(e.classes) ? e.classes[0] : e.classes;
+ return {
+ class_id: e.class_id,
+ tier: "masterclass",
+ subject: (klass as { subject?: string } | null)?.subject || "",
+ };
+ });
+ } else {
+ enrolDetails = (withTier.data || []).map((e) => {
+ const klass = Array.isArray(e.classes) ? e.classes[0] : e.classes;
+ return {
+ class_id: e.class_id,
+ tier: (e as { tier?: string }).tier || "masterclass",
+ subject: (klass as { subject?: string } | null)?.subject || "",
+ };
+ });
+ }
+ }
 
-  if (masterClassIds.length) {
-    const { data } = await supabase
-      .from("sessions")
-      .select("id, title, starts_at, ends_at, location_or_link, class_id")
-      .eq("type", "masterclass")
-      .in("class_id", masterClassIds)
-      .gte("starts_at", now)
-      .order("starts_at", { ascending: true })
-      .limit(20);
-    masterSessions = data || [];
-  }
+ let masterClassIds: string[] = [];
+ if (profile.role === "student") {
+ masterClassIds = enrolDetails.map((e) => e.class_id);
+ } else if (profile.role === "tutor") {
+ const { data: tutored } = await supabase
+ .from("class_tutors")
+ .select("class_id")
+ .eq("profile_id", profile.id);
+ masterClassIds = (tutored || []).map((t) => t.class_id);
+ } else if (profile.role === "admin") {
+ masterClassIds = allClasses.map((c) => c.id);
+ }
 
-  const classNameById = new Map((resourceClasses || []).map((c) => [c.id, c.name]));
-  const masterclassSessions = masterSessions.map((s) => ({
-    ...s,
-    className: s.class_id ? classNameById.get(s.class_id) : undefined,
-  }));
+ const now = new Date().toISOString();
+ let masterSessions: {
+ id: string;
+ title: string;
+ starts_at: string;
+ ends_at: string;
+ location_or_link: string;
+ class_id: string | null;
+ }[] = [];
 
-  type PairRow = {
-    tutor_id: string;
-    student_id: string;
-    subject: string | null;
-    note: string | null;
-    tutor?: { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null;
-    student?:
-      | { id: string; full_name: string | null; email: string }
-      | { id: string; full_name: string | null; email: string }[]
-      | null;
-  };
+ if (masterClassIds.length) {
+ const { data } = await supabase
+ .from("sessions")
+ .select("id, title, starts_at, ends_at, location_or_link, class_id")
+ .eq("type", "masterclass")
+ .in("class_id", masterClassIds)
+ .gte("starts_at", now)
+ .order("starts_at", { ascending: true })
+ .limit(30);
+ masterSessions = data || [];
+ }
 
-  let pairRows: PairRow[] = [];
-  if (profile.role === "student") {
-    const { data } = await supabase
-      .from("private_assignments")
-      .select("tutor_id, student_id, subject, note, tutor:profiles!tutor_id (full_name, email)")
-      .eq("student_id", profile.id);
-    pairRows = (data || []) as PairRow[];
-  } else if (profile.role === "tutor") {
-    const { data } = await supabase
-      .from("private_assignments")
-      .select(
-        "tutor_id, student_id, subject, note, student:profiles!student_id (id, full_name, email)"
-      )
-      .eq("tutor_id", profile.id);
-    pairRows = (data || []) as PairRow[];
-  } else {
-    const { data } = await supabase
-      .from("private_assignments")
-      .select(
-        "tutor_id, student_id, subject, note, student:profiles!student_id (id, full_name, email), tutor:profiles!tutor_id (full_name, email)"
-      );
-    pairRows = (data || []) as PairRow[];
-  }
+ const classById = new Map(allClasses.map((c) => [c.id, c]));
+ const mappedSessions = masterSessions.map((s) => {
+ const klass = s.class_id ? classById.get(s.class_id) : undefined;
+ return {
+ ...s,
+ className: klass?.name,
+ subject: klass?.subject || "",
+ };
+ });
+ const masterclassSessions = mappedSessions.filter((s) => !isUcatSubject(s.subject));
+ const ucatSessions = mappedSessions.filter((s) => isUcatSubject(s.subject));
 
-  const privateAssignments = pairRows.map((p) => {
-    const tutor = Array.isArray(p.tutor) ? p.tutor[0] : p.tutor;
-    const student = Array.isArray(p.student) ? p.student[0] : p.student;
-    let partnerLabel = "";
-    if (profile.role === "student") {
-      partnerLabel = `Tutor: ${tutor?.full_name || tutor?.email || "Assigned"}`;
-    } else if (profile.role === "tutor") {
-      partnerLabel = `Student: ${student?.full_name || student?.email || "Assigned"}`;
-    } else {
-      partnerLabel = `${tutor?.full_name || tutor?.email || "Tutor"} ↔ ${
-        student?.full_name || student?.email || "Student"
-      }`;
-    }
-    return {
-      subject: p.subject,
-      note: p.note,
-      partnerLabel,
-      studentId: p.student_id,
-      tutorId: p.tutor_id,
-    };
-  });
+ type PairRow = {
+ tutor_id: string;
+ student_id: string;
+ subject: string | null;
+ note: string | null;
+ tutor?: { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null;
+ student?:
+ | { id: string; full_name: string | null; email: string }
+ | { id: string; full_name: string | null; email: string }[]
+ | null;
+ };
 
-  const tutorSessionStudents = Array.from(
-    new Map(
-      privateAssignments.map((p) => [
-        p.studentId,
-        {
-          id: p.studentId,
-          label:
-            p.partnerLabel.replace(/^Student:\s*/, "").replace(/^.*↔\s*/, "") +
-            (p.subject ? ` · ${p.subject}` : ""),
-        },
-      ])
-    ).values()
-  );
+ let pairRows: PairRow[] = [];
+ if (profile.role === "student" || profile.role === "unverified") {
+ const { data } = await supabase
+ .from("private_assignments")
+ .select("tutor_id, student_id, subject, note, tutor:profiles!tutor_id (full_name, email)")
+ .eq("student_id", profile.id);
+ pairRows = (data || []) as PairRow[];
+ } else if (profile.role === "tutor") {
+ const { data } = await supabase
+ .from("private_assignments")
+ .select(
+ "tutor_id, student_id, subject, note, student:profiles!student_id (id, full_name, email)"
+ )
+ .eq("tutor_id", profile.id);
+ pairRows = (data || []) as PairRow[];
+ } else if (profile.role === "admin") {
+ const { data } = await supabase
+ .from("private_assignments")
+ .select(
+ "tutor_id, student_id, subject, note, student:profiles!student_id (id, full_name, email), tutor:profiles!tutor_id (full_name, email)"
+ );
+ pairRows = (data || []) as PairRow[];
+ }
 
-  let filesQuery = supabase
-    .from("private_pair_files")
-    .select("id, title, created_at, student_id, tutor_id")
-    .order("created_at", { ascending: false })
-    .limit(40);
-  if (profile.role === "student") filesQuery = filesQuery.eq("student_id", profile.id);
-  else if (profile.role === "tutor") filesQuery = filesQuery.eq("tutor_id", profile.id);
-  const { data: privateFilesRaw } = await filesQuery;
+ const privateAssignments = pairRows.map((p) => {
+ const tutor = Array.isArray(p.tutor) ? p.tutor[0] : p.tutor;
+ const student = Array.isArray(p.student) ? p.student[0] : p.student;
+ let partnerLabel = "";
+ if (profile.role === "student" || profile.role === "unverified") {
+ partnerLabel = `Tutor: ${tutor?.full_name || tutor?.email || "Assigned"}`;
+ } else if (profile.role === "tutor") {
+ partnerLabel = `Student: ${student?.full_name || student?.email || "Assigned"}`;
+ } else {
+ partnerLabel = `${tutor?.full_name || tutor?.email || "Tutor"} ↔ ${
+ student?.full_name || student?.email || "Student"
+ }`;
+ }
+ return {
+ subject: p.subject,
+ note: p.note,
+ partnerLabel,
+ studentId: p.student_id,
+ tutorId: p.tutor_id,
+ };
+ });
 
-  const nameByStudent = new Map(
-    privateAssignments.map((p) => [
-      p.studentId,
-      p.partnerLabel.replace(/^Student:\s*/, "").replace(/^.*↔\s*/, ""),
-    ])
-  );
+ const tutorSessionStudents = Array.from(
+ new Map(
+ privateAssignments.map((p) => [
+ p.studentId,
+ {
+ id: p.studentId!,
+ label:
+ p.partnerLabel.replace(/^Student:\s*/, "").replace(/^.*↔\s*/, "") +
+ (p.subject ? ` · ${p.subject}` : ""),
+ },
+ ])
+ ).values()
+ );
 
-  const privateFiles = (privateFilesRaw || []).map((f) => ({
-    ...f,
-    studentLabel: nameByStudent.get(f.student_id),
-  }));
+ let filesQuery = supabase
+ .from("private_pair_files")
+ .select("id, title, created_at, student_id, tutor_id")
+ .order("created_at", { ascending: false })
+ .limit(200);
+ if (profile.role === "student" || profile.role === "unverified") {
+ filesQuery = filesQuery.eq("student_id", profile.id);
+ } else if (profile.role === "tutor") {
+ filesQuery = filesQuery.eq("tutor_id", profile.id);
+ }
+ const { data: privateFilesRaw } =
+ profile.role === "unverified" || profile.role === "student" || profile.role === "tutor" || profile.role === "admin"
+ ? await filesQuery
+ : { data: [] };
 
-  return (
-    <>
-      <p className="section-kicker">Dashboard</p>
-      <h1 className="section-title">Your portal</h1>
-      <p className="muted" style={{ marginBottom: "1.15rem" }}>
-        Resources are shared. Masterclass is times + free consult. Private 1-on-1 is your pair
-        schedule and custom homework.
-      </p>
+ const nameByStudent = new Map(
+ privateAssignments.map((p) => [
+ p.studentId,
+ p.partnerLabel.replace(/^Student:\s*/, "").replace(/^.*↔\s*/, ""),
+ ])
+ );
 
-      <DashboardTabs
-        role={profile.role}
-        resourceClasses={resourceClasses || []}
-        masterclassSessions={masterclassSessions}
-        privateAssignments={privateAssignments}
-        privateFiles={privateFiles}
-        tutorStudents={profile.role === "student" ? [] : tutorSessionStudents}
-      />
+ const privateFiles = (privateFilesRaw || []).map((f) => ({
+ ...f,
+ studentLabel: nameByStudent.get(f.student_id),
+ }));
 
-      {profile.role === "tutor" && (
-        <div style={{ marginTop: "1.75rem" }}>
-          <h2 style={{ fontSize: "1.05rem", marginBottom: "0.65rem" }}>Quick private session</h2>
-          <TutorCreateSession students={tutorSessionStudents} />
-        </div>
-      )}
-    </>
-  );
+ const enrolledSubjectSlugs = new Set<string>();
+ if (profile.role === "student" || profile.role === "unverified") {
+ for (const e of enrolDetails) {
+ if (e.subject) enrolledSubjectSlugs.add(e.subject.toLowerCase());
+ }
+ for (const p of privateAssignments) {
+ if (p.subject) enrolledSubjectSlugs.add(p.subject.toLowerCase());
+ }
+ } else {
+ for (const c of allClasses) enrolledSubjectSlugs.add(c.subject.toLowerCase());
+ }
+
+ let programAccess: ProgramAccess = {
+ private: true,
+ masterclass: true,
+ ucat: true,
+ };
+
+ if (profile.role === "student" || profile.role === "unverified") {
+ const hasPair = privateAssignments.length > 0;
+ const hasPrivateTier = enrolDetails.some((e) => {
+ const t = e.tier || "masterclass";
+ return t === "private_1on1" || t === "both";
+ });
+ const hasMasterclassProgram = enrolDetails.some((e) => {
+ if (isUcatSubject(e.subject)) return false;
+ const t = e.tier || "masterclass";
+ return t === "masterclass" || t === "both";
+ });
+ const hasUcat =
+ enrolDetails.some((e) => isUcatSubject(e.subject)) ||
+ privateAssignments.some((p) => isUcatSubject(p.subject)) ||
+ (profile.subjects || []).some((s) => isUcatSubject(s));
+
+ programAccess = {
+ private: !pendingAccess && (hasPair || hasPrivateTier),
+ masterclass: !pendingAccess && hasMasterclassProgram,
+ ucat: !pendingAccess && hasUcat,
+ };
+ }
+
+ return (
+ <>
+ <p className="section-kicker">Dashboard</p>
+ <h1 className="section-title">Your portal</h1>
+ <p className="muted dash-lead">
+ {pendingAccess
+ ? "Progress tools are open now: Sylly-Map and ATAR. Private, Masterclass, and UCAT unlock once you’re enrolled."
+          : "Private, Masterclass, and UCAT for resources. Progress for Sylly-Map and ATAR tools."}
+ </p>
+
+ <DashboardTabs
+ role={profile.role}
+ programAccess={programAccess}
+ masterclassClasses={masterclassClasses}
+ ucatClasses={ucatClasses}
+ enrolledSubjectSlugs={[...enrolledSubjectSlugs]}
+ masterclassSessions={masterclassSessions}
+ ucatSessions={ucatSessions}
+ privateAssignments={privateAssignments}
+ privateFiles={privateFiles}
+ tutorStudents={
+ profile.role === "student" || profile.role === "unverified" ? [] : tutorSessionStudents
+ }
+ />
+
+ {profile.role === "tutor" && (
+ <div style={{ marginTop: "1.75rem" }}>
+ <h2 style={{ fontSize: "1.05rem", marginBottom: "0.65rem" }}>Quick private session</h2>
+ <TutorCreateSession students={tutorSessionStudents} />
+ </div>
+ )}
+ </>
+ );
 }

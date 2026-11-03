@@ -1,0 +1,151 @@
+export type EnrollmentTier = "private_1on1" | "masterclass" | "both";
+export type ResourceCategory =
+  | "core_resource"
+  | "mc_booklet_blank"
+  | "mc_solution"
+  | "mc_recording";
+
+export type AccessReason =
+  | "admin"
+  | "tutor_subject"
+  | "enrolled_tier"
+  | "manual_unlock"
+  | "locked_subject"
+  | "locked_tier"
+  | "unreleased";
+
+export type UpsellType = "add_subject" | "upgrade_masterclass" | "ask_tutor";
+
+export type AccessResult = {
+  canAccess: boolean;
+  reason: AccessReason;
+  upsellType?: UpsellType;
+};
+
+export type AccessUser = {
+  id: string;
+  role: "student" | "tutor" | "admin" | "unverified";
+};
+
+export type AccessResource = {
+  id: string;
+  category: ResourceCategory;
+  subjectSlug: string;
+  /** Global release flag for solutions (legacy) */
+  solutionsReleased?: boolean;
+};
+
+/**
+ * Derive enrollment tier for a subject from class enrolments + private pairs.
+ * Prefer explicit enrolment.tier when present.
+ */
+export function resolveSubjectTier(input: {
+  enrolledClassTiers: EnrollmentTier[];
+  hasPrivatePair: boolean;
+}): EnrollmentTier | null {
+  const tiers = new Set(input.enrolledClassTiers);
+  const hasMc =
+    tiers.has("masterclass") || tiers.has("both") || input.enrolledClassTiers.length > 0;
+  // If only private pair and no class enrolment → private_1on1
+  if (input.hasPrivatePair && !hasMc && tiers.size === 0) return "private_1on1";
+  if (input.hasPrivatePair && (hasMc || tiers.has("masterclass") || tiers.has("both"))) {
+    return "both";
+  }
+  if (tiers.has("both")) return "both";
+  if (tiers.has("private_1on1") && tiers.has("masterclass")) return "both";
+  if (tiers.has("private_1on1")) return "private_1on1";
+  if (tiers.has("masterclass") || hasMc) return "masterclass";
+  if (input.hasPrivatePair) return "private_1on1";
+  return null;
+}
+
+export function checkResourceAccess(input: {
+  user: AccessUser;
+  resource: AccessResource;
+  subjectTier: EnrollmentTier | null;
+  teachesSubject: boolean;
+  hasManualUnlock: boolean;
+}): AccessResult {
+  const { user, resource, subjectTier, teachesSubject, hasManualUnlock } = input;
+
+  if (user.role === "admin") {
+    return { canAccess: true, reason: "admin" };
+  }
+
+  if (user.role === "tutor") {
+    if (teachesSubject) return { canAccess: true, reason: "tutor_subject" };
+    return { canAccess: false, reason: "locked_subject", upsellType: "add_subject" };
+  }
+
+  if (user.role !== "student") {
+    return { canAccess: false, reason: "locked_subject" };
+  }
+
+  if (!subjectTier) {
+    return { canAccess: false, reason: "locked_subject", upsellType: "add_subject" };
+  }
+
+  const isMasterclass = subjectTier === "masterclass" || subjectTier === "both";
+  const isPrivate = subjectTier === "private_1on1" || subjectTier === "both";
+
+  switch (resource.category) {
+    case "core_resource":
+    case "mc_booklet_blank":
+      if (isMasterclass || isPrivate) {
+        return { canAccess: true, reason: "enrolled_tier" };
+      }
+      return { canAccess: false, reason: "locked_subject", upsellType: "add_subject" };
+
+    case "mc_solution": {
+      if (isMasterclass) return { canAccess: true, reason: "enrolled_tier" };
+      if (hasManualUnlock) return { canAccess: true, reason: "manual_unlock" };
+      // Legacy global release still counts as unlock for private students
+      if (resource.solutionsReleased) return { canAccess: true, reason: "enrolled_tier" };
+      if (isPrivate) {
+        return { canAccess: false, reason: "locked_tier", upsellType: "ask_tutor" };
+      }
+      return { canAccess: false, reason: "locked_subject", upsellType: "add_subject" };
+    }
+
+    case "mc_recording": {
+      if (isMasterclass) return { canAccess: true, reason: "enrolled_tier" };
+      if (isPrivate) {
+        return { canAccess: false, reason: "locked_tier", upsellType: "upgrade_masterclass" };
+      }
+      return { canAccess: false, reason: "locked_subject", upsellType: "add_subject" };
+    }
+
+    default:
+      return { canAccess: false, reason: "locked_tier" };
+  }
+}
+
+/** Map legacy resource_files.kind (+ optional category) to ResourceCategory */
+export function categoryFromFile(file: {
+  category?: string | null;
+  kind: string;
+  classStream?: string | null;
+}): ResourceCategory {
+  if (
+    file.category === "core_resource" ||
+    file.category === "mc_booklet_blank" ||
+    file.category === "mc_solution" ||
+    file.category === "mc_recording"
+  ) {
+    return file.category;
+  }
+  if (file.kind === "solutions") return "mc_solution";
+  if (file.kind === "workbook" && file.classStream === "masterclass") return "mc_booklet_blank";
+  return "core_resource";
+}
+
+export function stripLockedResource<T extends { storage_path?: string | null; video_url?: string | null }>(
+  row: T,
+  canAccess: boolean
+): Omit<T, "storage_path" | "video_url"> {
+  if (canAccess) return row as Omit<T, "storage_path" | "video_url">;
+  const safe = { ...row };
+  delete safe.storage_path;
+  delete safe.video_url;
+  return safe;
+}
