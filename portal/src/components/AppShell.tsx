@@ -39,10 +39,10 @@ export function AppShell({
           <header className="topbar">
             <Link href="/app" className="brand" prefetch>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="" className="logo" width={34} height={28} />
+              <img src="/logo.png" alt="" className="logo" width={40} height={33} />
               <span>Vantage Tutoring</span>
             </Link>
-            <nav className="nav-links">
+            <nav className="nav-links" aria-label="Primary">
               <Link href="/app" prefetch data-active={active === "dashboard"}>
                 <NavLabel>Home</NavLabel>
               </Link>
@@ -68,7 +68,7 @@ export function AppShell({
           <StudentPreviewBanner />
 
           {!workspace && (
-            <p className="role-chip" style={{ marginBottom: "1.35rem" }}>
+            <p className="role-chip" style={{ marginBottom: "1.75rem" }}>
               {profile.full_name || profile.email}
               <span aria-hidden="true">·</span>
               <span style={{ textTransform: "capitalize" }}>{profile.role}</span>
