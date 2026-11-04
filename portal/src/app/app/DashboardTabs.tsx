@@ -111,9 +111,9 @@ function ResourceLibrary({
  target="_blank"
  rel="noopener noreferrer"
  className="resource-card resource-card-locked"
- style={{ borderTop: `3px solid ${accent}`, ["--card-accent" as string]: accent }}
+ style={{ borderTop: `3px solid ${accent}` }}
  >
- <span className="resource-card-icon" style={{ background: `${accent}22`, color: accent }}>
+ <span className="resource-card-icon" style={{ background: accent, color: "#fff" }}>
  <PortalIcon name="lock" size={18} />
  </span>
  <span className="pill pill-locked">Locked</span>
@@ -132,10 +132,10 @@ function ResourceLibrary({
  href={`/app/classes/${c.id}`}
  className="resource-card"
  prefetch
- style={{ borderTop: `3px solid ${accent}`, ["--card-accent" as string]: accent }}
+ style={{ borderTop: `3px solid ${accent}` }}
  >
  <PendingCardLabel>
- <span className="resource-card-icon" style={{ background: `${accent}24`, color: accent }}>
+ <span className="resource-card-icon" style={{ background: accent, color: "#fff" }}>
  <PortalIcon name={iconName} size={18} />
  </span>
  <span className="pill">{pill}</span>
@@ -331,10 +331,6 @@ export function DashboardTabs({
 
  {tab === "private" && (
  <div className="dash-panel dash-panel-private">
- <div className="dash-panel-shapes" aria-hidden="true">
- <span className="shape-blob shape-blob-sky" />
- <span className="shape-dot shape-dot-gold" />
- </div>
  {!access.private ? (
  <ProgramGate
  program="private"
@@ -376,10 +372,6 @@ export function DashboardTabs({
 
  {tab === "masterclass" && (
  <div className="dash-panel dash-panel-masterclass">
- <div className="dash-panel-shapes" aria-hidden="true">
- <span className="shape-blob shape-blob-gold" />
- <span className="shape-ring shape-ring-navy" />
- </div>
  {!access.masterclass ? (
  <ProgramGate
  program="masterclass"
@@ -448,10 +440,6 @@ export function DashboardTabs({
 
  {tab === "library" && (
  <div className="dash-panel dash-panel-library">
- <div className="dash-panel-shapes" aria-hidden="true">
- <span className="shape-blob shape-blob-violet" />
- <span className="shape-dot shape-dot-mint" />
- </div>
  {!access.library ? (
  <ProgramGate
  program="private"
@@ -485,10 +473,6 @@ export function DashboardTabs({
 
  {tab === "ucat" && (
  <div className="dash-panel dash-panel-ucat">
- <div className="dash-panel-shapes" aria-hidden="true">
- <span className="shape-blob shape-blob-violet" />
- <span className="shape-ring shape-ring-gold" />
- </div>
  {!access.ucat ? (
  <ProgramGate
  program="ucat"
@@ -523,10 +507,6 @@ export function DashboardTabs({
 
  {tab === "progress" && (
  <div className="dash-panel dash-panel-progress">
- <div className="dash-panel-shapes" aria-hidden="true">
- <span className="shape-blob shape-blob-mint" />
- <span className="shape-dot shape-dot-gold" />
- </div>
  <p className="muted dash-lead">
  Sylly-Map syllabus checklist and ATAR calculator with subject marks.
  </p>

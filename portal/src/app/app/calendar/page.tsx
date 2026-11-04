@@ -138,10 +138,7 @@ export default async function CalendarPage() {
   return (
     <>
       <div className="page-hero">
-        <p className="section-kicker">
-          <span className="kicker-spark" aria-hidden="true" />
-          Schedule
-        </p>
+        <p className="section-kicker">Schedule</p>
         <h1 className="section-title">Calendar</h1>
       </div>
       {profile.role !== "student" && (

@@ -22,11 +22,6 @@ export function ProgramGate({
   const meta = GATE_META[program] || GATE_META.private;
   return (
     <div className={`program-gate program-gate-${program}`}>
-      <div className="program-gate-decor" aria-hidden="true">
-        <span className="shape-blob shape-blob-a" />
-        <span className="shape-blob shape-blob-b" />
-        <span className="shape-ring" />
-      </div>
       <div className="program-gate-head">
         <IconWell name={meta.icon} tone={meta.tone} size="lg" />
         <span className="pill pill-locked">

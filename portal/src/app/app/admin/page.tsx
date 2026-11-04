@@ -122,10 +122,7 @@ export default async function AdminPage() {
   return (
     <>
       <div className="page-hero">
-        <p className="section-kicker">
-          <span className="kicker-spark" aria-hidden="true" />
-          Operations
-        </p>
+        <p className="section-kicker">Operations</p>
         <h1 className="section-title">Admin</h1>
       </div>
       <p className="muted admin-lead">

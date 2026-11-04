@@ -36,12 +36,6 @@ export function AppShell({
   return (
     <StudentPreviewProvider canPreview={canPreview}>
       <div className={`app-frame tech-stage${workspace ? " app-frame-workspace" : ""}`}>
-        <div className="stage-shapes" aria-hidden="true">
-          <span className="stage-orb stage-orb-gold" />
-          <span className="stage-orb stage-orb-sky" />
-          <span className="stage-orb stage-orb-mint" />
-          <span className="stage-squircle stage-squircle-rose" />
-        </div>
         <div className={workspace ? "shell shell-wide" : "shell"}>
           <header className="topbar">
             <Link href="/app" className="brand" prefetch>

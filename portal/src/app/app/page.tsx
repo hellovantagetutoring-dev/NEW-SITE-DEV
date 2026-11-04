@@ -259,10 +259,7 @@ export default async function DashboardPage() {
  return (
  <>
  <div className="page-hero">
- <p className="section-kicker">
- <span className="kicker-spark" aria-hidden="true" />
- Dashboard
- </p>
+ <p className="section-kicker">Dashboard</p>
  <h1 className="section-title">Your portal</h1>
  <p className="muted dash-lead">
  {pendingAccess
