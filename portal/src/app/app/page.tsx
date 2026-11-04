@@ -18,12 +18,14 @@ export default async function DashboardPage() {
  const { data: resourceClasses } = await supabase
  .from("classes")
  .select("id, name, subject, unit_band, year_label, stream")
- .eq("stream", "masterclass")
+ .in("stream", ["masterclass", "library"])
  .order("name");
 
  const allClasses = resourceClasses || [];
- const masterclassClasses = allClasses.filter((c) => !isUcatSubject(c.subject));
- const ucatClasses = allClasses.filter((c) => isUcatSubject(c.subject));
+ const libraryClasses = allClasses.filter((c) => (c.stream || "") === "library");
+ const masterclassShelf = allClasses.filter((c) => (c.stream || "masterclass") === "masterclass");
+ const masterclassClasses = masterclassShelf.filter((c) => !isUcatSubject(c.subject));
+ const ucatClasses = masterclassShelf.filter((c) => isUcatSubject(c.subject));
 
  type EnrolDetail = {
  class_id: string;
@@ -72,7 +74,7 @@ export default async function DashboardPage() {
  .eq("profile_id", profile.id);
  masterClassIds = (tutored || []).map((t) => t.class_id);
  } else if (profile.role === "admin") {
- masterClassIds = allClasses.map((c) => c.id);
+ masterClassIds = masterclassShelf.map((c) => c.id);
  }
 
  const now = new Date().toISOString();
@@ -208,21 +210,24 @@ export default async function DashboardPage() {
  studentLabel: nameByStudent.get(f.student_id),
  }));
 
+ // Masterclass subject shelves unlock only with masterclass|both tier (not Private alone).
  const enrolledSubjectSlugs = new Set<string>();
  if (profile.role === "student" || profile.role === "unverified") {
  for (const e of enrolDetails) {
- if (e.subject) enrolledSubjectSlugs.add(e.subject.toLowerCase());
+ if (!e.subject) continue;
+ const t = e.tier || "masterclass";
+ if (t === "masterclass" || t === "both") {
+ enrolledSubjectSlugs.add(e.subject.toLowerCase());
  }
- for (const p of privateAssignments) {
- if (p.subject) enrolledSubjectSlugs.add(p.subject.toLowerCase());
  }
  } else {
- for (const c of allClasses) enrolledSubjectSlugs.add(c.subject.toLowerCase());
+ for (const c of masterclassShelf) enrolledSubjectSlugs.add(c.subject.toLowerCase());
  }
 
  let programAccess: ProgramAccess = {
  private: true,
  masterclass: true,
+ library: true,
  ucat: true,
  };
 
@@ -241,10 +246,12 @@ export default async function DashboardPage() {
  enrolDetails.some((e) => isUcatSubject(e.subject)) ||
  privateAssignments.some((p) => isUcatSubject(p.subject)) ||
  (profile.subjects || []).some((s) => isUcatSubject(s));
+ const hasLibraryProgram = hasPair || hasPrivateTier || hasMasterclassProgram;
 
  programAccess = {
  private: !pendingAccess && (hasPair || hasPrivateTier),
  masterclass: !pendingAccess && hasMasterclassProgram,
+ library: !pendingAccess && hasLibraryProgram,
  ucat: !pendingAccess && hasUcat,
  };
  }
@@ -255,14 +262,15 @@ export default async function DashboardPage() {
  <h1 className="section-title">Your portal</h1>
  <p className="muted dash-lead">
  {pendingAccess
- ? "Progress tools are open now: Sylly-Map and ATAR. Private, Masterclass, and UCAT unlock once you’re enrolled."
-          : "Private, Masterclass, and UCAT for resources. Progress for Sylly-Map and ATAR tools."}
+ ? "Progress tools are open now: Sylly-Map and ATAR. Private, Masterclass, Resource Library, and UCAT unlock once you’re enrolled."
+ : "Private and Masterclass for programs. Resource Library for mocks and retrieval. Progress for Sylly-Map and ATAR."}
  </p>
 
  <DashboardTabs
  role={profile.role}
  programAccess={programAccess}
  masterclassClasses={masterclassClasses}
+ libraryClasses={libraryClasses}
  ucatClasses={ucatClasses}
  enrolledSubjectSlugs={[...enrolledSubjectSlugs]}
  masterclassSessions={masterclassSessions}

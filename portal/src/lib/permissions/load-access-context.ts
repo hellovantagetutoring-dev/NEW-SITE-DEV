@@ -1,4 +1,5 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { normalizeSubjectKey } from "@/lib/student-fields";
 import type { Profile } from "@/lib/types";
 import {
   categoryFromFile,
@@ -18,6 +19,30 @@ export type FileAccessMeta = {
   access: AccessResult;
 };
 
+/** True if the student has any Private or Masterclass enrolment (pairs or class tiers). */
+export async function userHasProgramAccess(profile: Profile): Promise<boolean> {
+  if (profile.role === "admin" || profile.role === "tutor") return true;
+  if (profile.role !== "student") return false;
+
+  const service = createServiceClient();
+
+  const { count: pairCount } = await service
+    .from("private_assignments")
+    .select("*", { count: "exact", head: true })
+    .eq("student_id", profile.id);
+  if ((pairCount || 0) > 0) return true;
+
+  const { data: enrolments } = await service
+    .from("enrolments")
+    .select("tier")
+    .eq("profile_id", profile.id);
+
+  return (enrolments || []).some((row) => {
+    const t = (row.tier as string | null) || "masterclass";
+    return t === "private_1on1" || t === "masterclass" || t === "both";
+  });
+}
+
 export async function getSubjectTierForUser(
   profile: Profile,
   subjectSlug: string
@@ -28,6 +53,7 @@ export async function getSubjectTierForUser(
   const supabase = await createClient();
   const service = createServiceClient();
   const client = profile.role === "admin" || profile.role === "tutor" ? service : supabase;
+  const subjectKey = normalizeSubjectKey(subjectSlug);
 
   if (profile.role === "admin") {
     return { tier: "both", teachesSubject: true };
@@ -41,10 +67,9 @@ export async function getSubjectTierForUser(
 
     const teachesFromTable = (tutorSubjects || []).some((row) => {
       const sub = Array.isArray(row.subjects) ? row.subjects[0] : row.subjects;
-      return (sub as { slug?: string } | null)?.slug === subjectSlug;
+      return normalizeSubjectKey((sub as { slug?: string } | null)?.slug || "") === subjectKey;
     });
 
-    // Fallback: tutors of classes in this subject, or private pairs
     const { data: classTutor } = await client
       .from("class_tutors")
       .select("class_id, classes:class_id (subject)")
@@ -52,14 +77,16 @@ export async function getSubjectTierForUser(
 
     const teachesClass = (classTutor || []).some((row) => {
       const klass = Array.isArray(row.classes) ? row.classes[0] : row.classes;
-      return (klass as { subject?: string } | null)?.subject === subjectSlug;
+      return (
+        normalizeSubjectKey((klass as { subject?: string } | null)?.subject || "") === subjectKey
+      );
     });
 
     const { count: pairCount } = await client
       .from("private_assignments")
       .select("*", { count: "exact", head: true })
       .eq("tutor_id", profile.id)
-      .ilike("subject", `%${subjectSlug}%`);
+      .ilike("subject", `%${subjectKey}%`);
 
     return {
       tier: null,
@@ -67,7 +94,6 @@ export async function getSubjectTierForUser(
     };
   }
 
-  // Student
   const { data: enrolments } = await client
     .from("enrolments")
     .select("tier, classes:class_id (subject, stream)")
@@ -76,8 +102,13 @@ export async function getSubjectTierForUser(
   const enrolledClassTiers: EnrollmentTier[] = [];
   for (const row of enrolments || []) {
     const klass = Array.isArray(row.classes) ? row.classes[0] : row.classes;
-    const sub = (klass as { subject?: string; stream?: string } | null)?.subject;
-    if (sub !== subjectSlug) continue;
+    const sub = normalizeSubjectKey(
+      (klass as { subject?: string; stream?: string } | null)?.subject || ""
+    );
+    const stream = (klass as { stream?: string } | null)?.stream || "masterclass";
+    // Library stream enrolments don't count toward subject Masterclass tier.
+    if (stream === "library") continue;
+    if (sub !== subjectKey) continue;
     const tier = (row.tier as EnrollmentTier | null) || "masterclass";
     enrolledClassTiers.push(tier);
   }
@@ -86,7 +117,9 @@ export async function getSubjectTierForUser(
     .from("private_assignments")
     .select("*", { count: "exact", head: true })
     .eq("student_id", profile.id)
-    .or(`subject.ilike.%${subjectSlug}%,subject.ilike.%${subjectSlug.replace("-", " ")}%`);
+    .or(
+      `subject.ilike.%${subjectKey}%,subject.ilike.%${subjectKey.replace(/-/g, " ")}%`
+    );
 
   const tier = resolveSubjectTier({
     enrolledClassTiers,
@@ -106,7 +139,8 @@ export async function evaluateFileAccess(
     set_id: string;
   },
   subjectSlug: string,
-  classStream?: string | null
+  classStream?: string | null,
+  setSection?: string | null
 ): Promise<AccessResult> {
   const { tier, teachesSubject } = await getSubjectTierForUser(profile, subjectSlug);
 
@@ -129,7 +163,12 @@ export async function evaluateFileAccess(
     category: file.category,
     kind: file.kind,
     classStream,
+    setSection,
   });
+
+  const needsProgram =
+    category === "shared_library" || (classStream || "").toLowerCase() === "library";
+  const hasProgramAccess = needsProgram ? await userHasProgramAccess(profile) : false;
 
   return checkResourceAccess({
     user: { id: profile.id, role: profile.role },
@@ -142,5 +181,6 @@ export async function evaluateFileAccess(
     subjectTier: tier,
     teachesSubject,
     hasManualUnlock,
+    hasProgramAccess,
   });
 }

@@ -33,7 +33,7 @@ export async function GET(
 
   const { data: set } = await service
     .from("resource_sets")
-    .select("class_id, title, code")
+    .select("class_id, title, code, section")
     .eq("id", file.set_id)
     .maybeSingle();
   if (!set) {
@@ -74,7 +74,8 @@ export async function GET(
     profile,
     file,
     klass.subject,
-    klass.stream
+    klass.stream,
+    set.section
   );
   if (!access.canAccess) {
     return NextResponse.json(

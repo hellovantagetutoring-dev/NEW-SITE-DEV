@@ -3,7 +3,8 @@ export type ResourceCategory =
   | "core_resource"
   | "mc_booklet_blank"
   | "mc_solution"
-  | "mc_recording";
+  | "mc_recording"
+  | "shared_library";
 
 export type AccessReason =
   | "admin"
@@ -38,24 +39,20 @@ export type AccessResource = {
 /**
  * Derive enrollment tier for a subject from class enrolments + private pairs.
  * Prefer explicit enrolment.tier when present.
+ * Private pair alone (or with private_1on1 enrolment) does NOT grant masterclass.
  */
 export function resolveSubjectTier(input: {
   enrolledClassTiers: EnrollmentTier[];
   hasPrivatePair: boolean;
 }): EnrollmentTier | null {
   const tiers = new Set(input.enrolledClassTiers);
-  const hasMc =
-    tiers.has("masterclass") || tiers.has("both") || input.enrolledClassTiers.length > 0;
-  // If only private pair and no class enrolment → private_1on1
-  if (input.hasPrivatePair && !hasMc && tiers.size === 0) return "private_1on1";
-  if (input.hasPrivatePair && (hasMc || tiers.has("masterclass") || tiers.has("both"))) {
-    return "both";
-  }
-  if (tiers.has("both")) return "both";
-  if (tiers.has("private_1on1") && tiers.has("masterclass")) return "both";
-  if (tiers.has("private_1on1")) return "private_1on1";
-  if (tiers.has("masterclass") || hasMc) return "masterclass";
-  if (input.hasPrivatePair) return "private_1on1";
+  const hasMc = tiers.has("masterclass") || tiers.has("both");
+  const hasPrivateEnrol = tiers.has("private_1on1") || tiers.has("both");
+  const hasPrivate = input.hasPrivatePair || hasPrivateEnrol;
+
+  if (hasMc && hasPrivate) return "both";
+  if (hasMc) return "masterclass";
+  if (hasPrivate) return "private_1on1";
   return null;
 }
 
@@ -65,15 +62,24 @@ export function checkResourceAccess(input: {
   subjectTier: EnrollmentTier | null;
   teachesSubject: boolean;
   hasManualUnlock: boolean;
+  /** Any Private or Masterclass enrolment (for Resource Library packs). */
+  hasProgramAccess?: boolean;
 }): AccessResult {
-  const { user, resource, subjectTier, teachesSubject, hasManualUnlock } = input;
+  const {
+    user,
+    resource,
+    subjectTier,
+    teachesSubject,
+    hasManualUnlock,
+    hasProgramAccess = false,
+  } = input;
 
   if (user.role === "admin") {
     return { canAccess: true, reason: "admin" };
   }
 
   if (user.role === "tutor") {
-    if (teachesSubject) return { canAccess: true, reason: "tutor_subject" };
+    if (teachesSubject || hasProgramAccess) return { canAccess: true, reason: "tutor_subject" };
     return { canAccess: false, reason: "locked_subject", upsellType: "add_subject" };
   }
 
@@ -81,26 +87,32 @@ export function checkResourceAccess(input: {
     return { canAccess: false, reason: "locked_subject" };
   }
 
-  if (!subjectTier) {
-    return { canAccess: false, reason: "locked_subject", upsellType: "add_subject" };
-  }
-
   const isMasterclass = subjectTier === "masterclass" || subjectTier === "both";
   const isPrivate = subjectTier === "private_1on1" || subjectTier === "both";
 
   switch (resource.category) {
+    case "shared_library": {
+      if (hasProgramAccess || isMasterclass || isPrivate) {
+        return { canAccess: true, reason: "enrolled_tier" };
+      }
+      return { canAccess: false, reason: "locked_subject", upsellType: "add_subject" };
+    }
+
     case "core_resource":
     case "mc_booklet_blank":
-      if (isMasterclass || isPrivate) {
-        return { canAccess: true, reason: "enrolled_tier" };
+      // Masterclass libraries require Masterclass enrolment (not free with Private).
+      if (isMasterclass) return { canAccess: true, reason: "enrolled_tier" };
+      if (isPrivate) {
+        return { canAccess: false, reason: "locked_tier", upsellType: "upgrade_masterclass" };
       }
       return { canAccess: false, reason: "locked_subject", upsellType: "add_subject" };
 
     case "mc_solution": {
       if (isMasterclass) return { canAccess: true, reason: "enrolled_tier" };
       if (hasManualUnlock) return { canAccess: true, reason: "manual_unlock" };
-      // Legacy global release still counts as unlock for private students
-      if (resource.solutionsReleased) return { canAccess: true, reason: "enrolled_tier" };
+      if (resource.solutionsReleased && isMasterclass) {
+        return { canAccess: true, reason: "enrolled_tier" };
+      }
       if (isPrivate) {
         return { canAccess: false, reason: "locked_tier", upsellType: "ask_tutor" };
       }
@@ -125,17 +137,27 @@ export function categoryFromFile(file: {
   category?: string | null;
   kind: string;
   classStream?: string | null;
+  setSection?: string | null;
 }): ResourceCategory {
   if (
     file.category === "core_resource" ||
     file.category === "mc_booklet_blank" ||
     file.category === "mc_solution" ||
-    file.category === "mc_recording"
+    file.category === "mc_recording" ||
+    file.category === "shared_library"
   ) {
     return file.category;
   }
+
+  const stream = (file.classStream || "").toLowerCase();
+  const section = (file.setSection || "").toLowerCase();
+
+  if (stream === "library") return "shared_library";
+  if (file.kind === "mock" || section === "mocks" || section === "retrieval") {
+    return "shared_library";
+  }
   if (file.kind === "solutions") return "mc_solution";
-  if (file.kind === "workbook" && file.classStream === "masterclass") return "mc_booklet_blank";
+  if (file.kind === "workbook" && stream === "masterclass") return "mc_booklet_blank";
   return "core_resource";
 }
 

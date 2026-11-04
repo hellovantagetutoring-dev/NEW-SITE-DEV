@@ -54,10 +54,11 @@ type PrivateFile = {
 export type ProgramAccess = {
  private: boolean;
  masterclass: boolean;
+ library: boolean;
  ucat: boolean;
 };
 
-type TabId = "private" | "masterclass" | "ucat" | "progress";
+type TabId = "private" | "masterclass" | "library" | "ucat" | "progress";
 
 const CONSULT_URL =
  process.env.NEXT_PUBLIC_CONSULT_URL ||
@@ -94,7 +95,12 @@ function ResourceLibrary({
  const locked = !staff && !enrolled.has(c.subject.toLowerCase());
  const meta = [c.subject, c.unit_band, c.year_label].filter(Boolean).join(" · ");
  if (locked) {
- const program = c.subject.toLowerCase() === "ucat" ? "ucat" : "masterclass";
+ const program =
+ c.subject.toLowerCase() === "ucat"
+ ? "ucat"
+ : (c.stream || "") === "library"
+ ? "private"
+ : "masterclass";
  return (
  <a
  key={c.id}
@@ -113,6 +119,7 @@ function ResourceLibrary({
  </a>
  );
  }
+ const pill = (c.stream || "") === "library" ? "Pack" : "Library";
  return (
  <Link
  key={c.id}
@@ -122,7 +129,7 @@ function ResourceLibrary({
  style={{ borderTop: `3px solid ${accent}` }}
  >
  <PendingCardLabel>
- <span className="pill">Library</span>
+ <span className="pill">{pill}</span>
  <h3>{c.name}</h3>
  <p className="muted" style={{ margin: 0, fontSize: "0.86rem" }}>
  {meta}
@@ -180,6 +187,7 @@ export function DashboardTabs({
  role,
  programAccess,
  masterclassClasses,
+ libraryClasses = [],
  ucatClasses,
  enrolledSubjectSlugs = [],
  masterclassSessions,
@@ -191,6 +199,7 @@ export function DashboardTabs({
  role: string;
  programAccess: ProgramAccess;
  masterclassClasses: ClassCard[];
+ libraryClasses?: ClassCard[];
  ucatClasses: ClassCard[];
  enrolledSubjectSlugs?: string[];
  masterclassSessions: MasterSession[];
@@ -203,13 +212,16 @@ export function DashboardTabs({
  const staff = (role === "tutor" || role === "admin") && !preview.enabled;
 
  const access = useMemo((): ProgramAccess => {
- if (staff) return { private: true, masterclass: true, ucat: true };
+ if (staff) return { private: true, masterclass: true, library: true, ucat: true };
  if (preview.enabled) {
  const tier = preview.tier;
  const subjectsOn = preview.subjectScope === "all";
+ const privateOn = subjectsOn && (tier === "private_1on1" || tier === "both");
+ const masterOn = subjectsOn && (tier === "masterclass" || tier === "both");
  return {
- private: subjectsOn && (tier === "private_1on1" || tier === "both"),
- masterclass: subjectsOn && (tier === "masterclass" || tier === "both"),
+ private: privateOn,
+ masterclass: masterOn,
+ library: privateOn || masterOn,
  ucat: false,
  };
  }
@@ -220,6 +232,8 @@ export function DashboardTabs({
  ? "private"
  : access.masterclass
  ? "masterclass"
+ : access.library
+ ? "library"
  : access.ucat
  ? "ucat"
  : "progress";
@@ -249,6 +263,17 @@ export function DashboardTabs({
  enrolledSubjectSlugs,
  ]);
 
+ // Resource Library unlocks as a whole once any Private or Masterclass enrolment exists.
+ const libraryEnrolled = useMemo(() => {
+ if (staff || (preview.enabled && preview.subjectScope === "all" && access.library)) {
+ return new Set(libraryClasses.map((c) => c.subject.toLowerCase()));
+ }
+ if (access.library) {
+ return new Set(libraryClasses.map((c) => c.subject.toLowerCase()));
+ }
+ return new Set<string>();
+ }, [staff, preview.enabled, preview.subjectScope, access.library, libraryClasses]);
+
  const pairTutors = useMemo(() => {
  const map = new Map<string, string>();
  for (const p of privateAssignments) {
@@ -265,6 +290,7 @@ export function DashboardTabs({
  const tabs: { id: TabId; label: string; locked: boolean }[] = [
  { id: "private", label: "Private", locked: !access.private },
  { id: "masterclass", label: "Masterclass", locked: !access.masterclass },
+ { id: "library", label: "Resource Library", locked: !access.library },
  { id: "ucat", label: "UCAT", locked: !access.ucat },
  { id: "progress", label: "Progress", locked: false },
  ];
@@ -295,13 +321,13 @@ export function DashboardTabs({
  <ProgramGate
  program="private"
  title="Private 1-1 is locked"
- body="Enrol in Private 1-1 for a matched tutor, custom homework, and flexible sessions. You can still browse Masterclass if you’re enrolled there."
+ body="Enrol in Private 1-1 for a matched tutor, custom homework, and flexible sessions. Masterclass libraries stay separate; Resource Library unlocks with either program."
  />
  ) : (
  <>
  <p className="muted dash-lead">
- Your tutoring pairs, custom files, and assessment dropbox. Shared subject libraries
- live under Masterclass.
+ Your tutoring pairs, custom files, and assessment dropbox. Mocks and retrieval packs
+ live under Resource Library. Subject Masterclass libraries need Masterclass enrolment.
  </p>
  {preview.enabled ? (
  <p className="muted">Exit student view to manage private pair files.</p>
@@ -330,31 +356,16 @@ export function DashboardTabs({
  {tab === "masterclass" && (
  <div className="dash-panel">
  {!access.masterclass ? (
- <>
  <ProgramGate
  program="masterclass"
  title="Masterclass is restricted"
- body="You’re on Private 1-1 only. Enrol in Masterclass for weekly sessions, worked solutions, and recordings. Subject libraries you’ve been paired for may still open with Private access."
+ body="Masterclass subject libraries, solutions, and recordings need Masterclass enrolment. Private students still get the Resource Library for mocks and retrieval practice."
  />
- {enrolled.size > 0 && (
- <div className="dash-section" style={{ marginTop: "1.25rem" }}>
- <div className="dash-section-head">
- <h2>Subject libraries</h2>
- </div>
- <ResourceLibrary
- classes={masterclassClasses}
- enrolled={enrolled}
- staff={false}
- emptyLabel="No masterclass libraries yet."
- />
- </div>
- )}
- </>
  ) : (
  <>
  <p className="muted dash-lead">
-                Subject libraries, upcoming sessions, and a free consult anytime, not only for
-                enrolment questions.
+ Subject libraries, upcoming sessions, and a free consult anytime — not only for
+ enrolment questions.
  </p>
 
  <div className="dash-consult">
@@ -399,6 +410,36 @@ export function DashboardTabs({
  sessions={masterclassSessions}
  emptyLabel="No upcoming masterclass sessions yet."
  />
+ </>
+ )}
+ </div>
+ )}
+
+ {tab === "library" && (
+ <div className="dash-panel">
+ {!access.library ? (
+ <ProgramGate
+ program="private"
+ title="Resource Library is locked"
+ body="Enrol in Private 1-1 or Masterclass to unlock the Vantage Resource Library — mock tests, retrieval practice, and shared packs."
+ />
+ ) : (
+ <>
+ <p className="muted dash-lead">
+ Vantage Resource Library: mock tests, retrieval practice, and shared study packs.
+ Included with Private or Masterclass enrolment.
+ </p>
+ <div className="dash-section">
+ <div className="dash-section-head">
+ <h2>Library shelves</h2>
+ </div>
+ <ResourceLibrary
+ classes={libraryClasses}
+ enrolled={libraryEnrolled}
+ staff={staff}
+ emptyLabel="Library packs are being published. Check back soon, or ask your tutor."
+ />
+ </div>
  </>
  )}
  </div>

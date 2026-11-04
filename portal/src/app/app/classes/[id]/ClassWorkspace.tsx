@@ -37,6 +37,7 @@ const SECTION_LABELS: Record<string, string> = {
  workbooks: "Workbooks",
  homework: "Homework",
  mocks: "Mock exams",
+ retrieval: "Retrieval practice",
 };
 
 const KIND_LABELS: Record<string, string> = {
@@ -126,6 +127,7 @@ export function ClassWorkspace({
  subjectTier: tier,
  teachesSubject: false,
  hasManualUnlock: preview.solutionsUnlocked,
+ hasProgramAccess: !!tier,
  });
  return {
  ...f,

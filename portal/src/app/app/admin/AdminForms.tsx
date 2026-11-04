@@ -612,6 +612,10 @@ export function AdminForms({
  const students = profiles.filter((p) => p.role === "student" || p.role === "admin");
  const pendingCount = profiles.filter((p) => p.role === "unverified").length;
  const masterClasses = classes.filter((c) => (c.stream || "masterclass") === "masterclass");
+ const uploadClasses = classes.filter((c) => {
+ const stream = c.stream || "masterclass";
+ return stream === "masterclass" || stream === "library";
+ });
 
  function roleLabel(role: string) {
  if (role === "unverified") return "Unauthorised";
@@ -991,8 +995,9 @@ export function AdminForms({
  <div>
  <h2>Upload resource set</h2>
  <p className="muted">
- PDFs for a masterclass library. Workbooks are core; solutions stay gated for Private
- 1-1 until a tutor releases them.
+ Upload into a Masterclass subject library or a Resource Library pack. Masterclass
+ workbooks/solutions need Masterclass enrolment; Library packs unlock with Private or
+ Masterclass.
  </p>
  </div>
  </header>
@@ -1009,9 +1014,10 @@ export function AdminForms({
  Class
  <select name="classId" required>
  <option value="">Select…</option>
- {masterClasses.map((c) => (
+ {uploadClasses.map((c) => (
  <option key={c.id} value={c.id}>
  {c.name}
+ {(c.stream || "") === "library" ? " · Library" : ""}
  </option>
  ))}
  </select>
@@ -1030,6 +1036,7 @@ export function AdminForms({
  <option value="workbooks">Workbooks</option>
  <option value="homework">Homework</option>
  <option value="mocks">Mock exams</option>
+ <option value="retrieval">Retrieval practice</option>
  </select>
  </label>
  <label className="field">
@@ -1057,8 +1064,9 @@ export function AdminForms({
  <div>
  <h2>Create class</h2>
  <p className="muted">
- Masterclass classes power the shared Resources library. Private homework stays on the
- Private tab for tutors.
+ Masterclass = subject libraries for Masterclass enrolment. Resource Library = mocks /
+ retrieval packs for anyone on Private or Masterclass. Private homework stays on the Private
+ tab.
  </p>
  </div>
  </header>
@@ -1080,7 +1088,8 @@ export function AdminForms({
  <label className="field">
  Stream
  <select name="stream" required defaultValue="masterclass">
- <option value="masterclass">Masterclass / shared Resources</option>
+ <option value="masterclass">Masterclass subject library</option>
+ <option value="library">Vantage Resource Library</option>
  <option value="private">Private (legacy class shell)</option>
  </select>
  </label>
@@ -1091,6 +1100,9 @@ export function AdminForms({
  <label className="field">
  Subject
  <select name="subject" required defaultValue="methods">
+ <option value="general">General / cross-subject</option>
+ <option value="retrieval">Retrieval practice</option>
+ <option value="mocks">Mock exams</option>
  {STUDENT_SUBJECTS.map((s) => (
  <option key={s.value} value={s.value}>
  {s.label}

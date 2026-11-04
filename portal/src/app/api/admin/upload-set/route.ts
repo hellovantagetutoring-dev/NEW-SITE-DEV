@@ -32,6 +32,22 @@ export async function POST(request: Request) {
     const homework = assertPdf(form.get("homework") as File | null, "Homework");
 
     const service = createServiceClient();
+    const { data: klass } = await service
+      .from("classes")
+      .select("stream")
+      .eq("id", classId)
+      .maybeSingle();
+    const stream = (klass?.stream || "masterclass").toLowerCase();
+    const libraryPack =
+      stream === "library" || section === "mocks" || section === "retrieval";
+    const primaryKind =
+      section === "mocks" ? "mock" : section === "retrieval" ? "homework" : "workbook";
+    const primaryCategory = libraryPack
+      ? "shared_library"
+      : stream === "masterclass" && primaryKind === "workbook"
+        ? "mc_booklet_blank"
+        : "core_resource";
+
     const sortKey = code.padStart(8, "0");
     const { data: set, error: setError } = await service
       .from("resource_sets")
@@ -49,25 +65,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: setError?.message || "Set failed" }, { status: 500 });
     }
 
-    async function putFile(file: File, kind: string) {
+    async function putFile(file: File, kind: string, category: string) {
       const path = `${classId}/${set!.id}/${kind}-${Date.now()}.pdf`;
       const buffer = Buffer.from(await file.arrayBuffer());
       const { error } = await service.storage
         .from("class-resources")
         .upload(path, buffer, { contentType: "application/pdf", upsert: false });
       if (error) throw new Error(error.message);
-      const { error: fileError } = await service.from("resource_files").insert({
+      const row: Record<string, string | null> = {
         set_id: set!.id,
         kind,
         storage_path: path,
-        solutions_released_at: kind === "solutions" ? null : null,
+        solutions_released_at: null,
+      };
+      let { error: fileError } = await service.from("resource_files").insert({
+        ...row,
+        category,
       });
+      if (fileError && /category|schema cache/i.test(fileError.message)) {
+        ({ error: fileError } = await service.from("resource_files").insert(row));
+      }
       if (fileError) throw new Error(fileError.message);
     }
 
-    await putFile(workbook, "workbook");
-    if (solutions) await putFile(solutions, "solutions");
-    if (homework) await putFile(homework, "homework");
+    await putFile(workbook, primaryKind, primaryCategory);
+    if (solutions) {
+      await putFile(
+        solutions,
+        "solutions",
+        libraryPack ? "shared_library" : "mc_solution"
+      );
+    }
+    if (homework) {
+      await putFile(
+        homework,
+        "homework",
+        libraryPack ? "shared_library" : "core_resource"
+      );
+    }
 
     return NextResponse.json({ message: `Set ${code} is live` });
   } catch (err) {

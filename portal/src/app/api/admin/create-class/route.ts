@@ -9,7 +9,9 @@ export async function POST(request: Request) {
   }
   const body = await request.json();
   const supabase = await createClient();
-  const stream = body.stream === "private" ? "private" : "masterclass";
+  const streamRaw = String(body.stream || "masterclass").toLowerCase();
+  const stream =
+    streamRaw === "private" ? "private" : streamRaw === "library" ? "library" : "masterclass";
   const { error } = await supabase.from("classes").insert({
     name: String(body.name || "").trim(),
     subject: String(body.subject || "").trim().toLowerCase(),

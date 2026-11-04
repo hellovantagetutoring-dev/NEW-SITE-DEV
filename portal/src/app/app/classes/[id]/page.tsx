@@ -63,18 +63,23 @@ export default async function ClassPage({
  }
  }
 
+ const setSectionById = new Map((sets || []).map((s) => [s.id, s.section || ""]));
+
  const files = await Promise.all(
  (filesRaw || []).map(async (f) => {
+ const setSection = setSectionById.get(f.set_id) || "";
  const access: AccessResult = await evaluateFileAccess(
  profile,
  f,
  klass.subject,
- klass.stream
+ klass.stream,
+ setSection
  );
  const category: ResourceCategory = categoryFromFile({
  category: f.category,
  kind: f.kind,
  classStream: klass.stream,
+ setSection,
  });
  return {
  id: f.id,

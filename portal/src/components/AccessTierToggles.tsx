@@ -38,7 +38,7 @@ export function AccessTierToggles({
           </span>
           <span className="switch-copy">
             <strong>Masterclass</strong>
-            {!compact && <span className="muted">Solutions + recordings</span>}
+            {!compact && <span className="muted">Subject libraries, solutions, recordings</span>}
           </span>
         </label>
         <label className="switch-field" htmlFor={`${id}-p11`}>
@@ -53,7 +53,9 @@ export function AccessTierToggles({
           </span>
           <span className="switch-copy">
             <strong>Private 1-1</strong>
-            {!compact && <span className="muted">Core resources; solutions by tutor</span>}
+            {!compact && (
+              <span className="muted">Pairs + Resource Library; Masterclass stays separate</span>
+            )}
           </span>
         </label>
       </div>
