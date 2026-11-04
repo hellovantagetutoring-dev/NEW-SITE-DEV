@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
+import { PortalIcon } from "@/components/PortalIcon";
 import type { Profile } from "@/lib/types";
 import { StudentPreviewProvider } from "@/lib/student-preview";
 import {
@@ -35,6 +36,12 @@ export function AppShell({
   return (
     <StudentPreviewProvider canPreview={canPreview}>
       <div className={`app-frame tech-stage${workspace ? " app-frame-workspace" : ""}`}>
+        <div className="stage-shapes" aria-hidden="true">
+          <span className="stage-orb stage-orb-gold" />
+          <span className="stage-orb stage-orb-sky" />
+          <span className="stage-orb stage-orb-mint" />
+          <span className="stage-squircle stage-squircle-rose" />
+        </div>
         <div className={workspace ? "shell shell-wide" : "shell"}>
           <header className="topbar">
             <Link href="/app" className="brand" prefetch>
@@ -44,15 +51,18 @@ export function AppShell({
             </Link>
             <nav className="nav-links" aria-label="Primary">
               <Link href="/app" prefetch data-active={active === "dashboard"}>
+                <PortalIcon name="home" size={16} />
                 <NavLabel>Home</NavLabel>
               </Link>
               {profile.role !== "unverified" && (
                 <Link href="/app/calendar" prefetch data-active={active === "calendar"}>
+                  <PortalIcon name="calendar" size={16} />
                   <NavLabel>Calendar</NavLabel>
                 </Link>
               )}
               {profile.role === "admin" && (
                 <Link href="/app/admin" prefetch data-active={active === "admin"}>
+                  <PortalIcon name="admin" size={16} />
                   <NavLabel>Admin</NavLabel>
                 </Link>
               )}

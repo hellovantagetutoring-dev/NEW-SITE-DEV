@@ -137,8 +137,13 @@ export default async function CalendarPage() {
 
   return (
     <>
-      <p className="section-kicker">Schedule</p>
-      <h1 className="section-title">Calendar</h1>
+      <div className="page-hero">
+        <p className="section-kicker">
+          <span className="kicker-spark" aria-hidden="true" />
+          Schedule
+        </p>
+        <h1 className="section-title">Calendar</h1>
+      </div>
       {profile.role !== "student" && (
         <p className="muted" style={{ marginBottom: "1.15rem" }}>
           Month and week views in Brisbane time. Set a recurring schedule for a tutoring pair, request

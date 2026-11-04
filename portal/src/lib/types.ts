@@ -62,9 +62,22 @@ export type SessionRow = {
 };
 
 export const SUBJECT_ACCENT: Record<string, string> = {
-  methods: "#7EB6D9",
-  specialist: "#1B3A6B",
-  chemistry: "#E8A0BF",
-  physics: "#7B6BB0",
-  literature: "#C4A484",
+  methods: "#5BA4D9",
+  specialist: "#3D5A99",
+  chemistry: "#E891B4",
+  physics: "#8B7CC9",
+  literature: "#C9A27A",
+  english: "#6CB5A0",
+  economics: "#E0A35C",
+  philosophy: "#9B8EC4",
+  "digital-solutions": "#4EAEB5",
+  engineering: "#D97B6C",
+  japanese: "#E07A8A",
+  french: "#6A9BE0",
+  spanish: "#E0B04D",
+  ucat: "#5C7CFA",
+  general: "#C5A15F",
+  retrieval: "#34C759",
+  mocks: "#FF9F0A",
+  library: "#AF52DE",
 };

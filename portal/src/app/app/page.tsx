@@ -258,13 +258,18 @@ export default async function DashboardPage() {
 
  return (
  <>
- <p className="section-kicker">Dashboard</p>
+ <div className="page-hero">
+ <p className="section-kicker">
+ <span className="kicker-spark" aria-hidden="true" />
+ Dashboard
+ </p>
  <h1 className="section-title">Your portal</h1>
  <p className="muted dash-lead">
  {pendingAccess
  ? "Progress tools are open now: Sylly-Map and ATAR. Private, Masterclass, Resource Library, and UCAT unlock once you’re enrolled."
  : "Private and Masterclass for programs. Resource Library for mocks and retrieval. Progress for Sylly-Map and ATAR."}
  </p>
+ </div>
 
  <DashboardTabs
  role={profile.role}

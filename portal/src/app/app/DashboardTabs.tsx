@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLinkStatus } from "next/link";
 import { useMemo, useState } from "react";
+import { IconWell, PortalIcon, type PortalIconName } from "@/components/PortalIcon";
 import { marketingEnrolUrl } from "@/lib/enrol-links";
 import { SUBJECT_ACCENT } from "@/lib/types";
 import { useStudentPreview } from "@/lib/student-preview";
@@ -94,11 +95,13 @@ function ResourceLibrary({
  const accent = SUBJECT_ACCENT[c.subject.toLowerCase()] || "var(--gold)";
  const locked = !staff && !enrolled.has(c.subject.toLowerCase());
  const meta = [c.subject, c.unit_band, c.year_label].filter(Boolean).join(" · ");
+ const isLibrary = (c.stream || "") === "library";
+ const iconName: PortalIconName = isLibrary ? "pack" : "book";
  if (locked) {
  const program =
  c.subject.toLowerCase() === "ucat"
  ? "ucat"
- : (c.stream || "") === "library"
+ : isLibrary
  ? "private"
  : "masterclass";
  return (
@@ -108,30 +111,36 @@ function ResourceLibrary({
  target="_blank"
  rel="noopener noreferrer"
  className="resource-card resource-card-locked"
- style={{ borderTop: `3px solid ${accent}` }}
+ style={{ borderTop: `3px solid ${accent}`, ["--card-accent" as string]: accent }}
  >
+ <span className="resource-card-icon" style={{ background: `${accent}22`, color: accent }}>
+ <PortalIcon name="lock" size={18} />
+ </span>
  <span className="pill pill-locked">Locked</span>
  <h3>{c.name}</h3>
- <p className="muted" style={{ margin: 0, fontSize: "0.86rem" }}>
+ <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
  {meta}
  </p>
  <span className="resource-card-cta">Enrol today</span>
  </a>
  );
  }
- const pill = (c.stream || "") === "library" ? "Pack" : "Library";
+ const pill = isLibrary ? "Pack" : "Library";
  return (
  <Link
  key={c.id}
  href={`/app/classes/${c.id}`}
  className="resource-card"
  prefetch
- style={{ borderTop: `3px solid ${accent}` }}
+ style={{ borderTop: `3px solid ${accent}`, ["--card-accent" as string]: accent }}
  >
  <PendingCardLabel>
+ <span className="resource-card-icon" style={{ background: `${accent}24`, color: accent }}>
+ <PortalIcon name={iconName} size={18} />
+ </span>
  <span className="pill">{pill}</span>
  <h3>{c.name}</h3>
- <p className="muted" style={{ margin: 0, fontSize: "0.86rem" }}>
+ <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
  {meta}
  </p>
  </PendingCardLabel>
@@ -152,7 +161,10 @@ function SessionBlock({
  return (
  <div className="dash-section">
  <div className="dash-section-head">
- <h2>Upcoming sessions</h2>
+ <h2>
+ <IconWell name="session" tone="sky" size="sm" />
+ Upcoming sessions
+ </h2>
  <Link href="/app/calendar" className="btn btn-ghost btn-compact">
  Calendar
  </Link>
@@ -287,12 +299,12 @@ export function DashboardTabs({
  return [...map.entries()].map(([id, label]) => ({ id, label }));
  }, [privateAssignments]);
 
- const tabs: { id: TabId; label: string; locked: boolean }[] = [
- { id: "private", label: "Private", locked: !access.private },
- { id: "masterclass", label: "Masterclass", locked: !access.masterclass },
- { id: "library", label: "Resource Library", locked: !access.library },
- { id: "ucat", label: "UCAT", locked: !access.ucat },
- { id: "progress", label: "Progress", locked: false },
+ const tabs: { id: TabId; label: string; locked: boolean; icon: PortalIconName }[] = [
+ { id: "private", label: "Private", locked: !access.private, icon: "private" },
+ { id: "masterclass", label: "Masterclass", locked: !access.masterclass, icon: "masterclass" },
+ { id: "library", label: "Resource Library", locked: !access.library, icon: "library" },
+ { id: "ucat", label: "UCAT", locked: !access.ucat, icon: "ucat" },
+ { id: "progress", label: "Progress", locked: false, icon: "progress" },
  ];
 
  return (
@@ -306,17 +318,23 @@ export function DashboardTabs({
  className="segmented-item"
  data-active={tab === t.id}
  data-locked={t.locked || undefined}
+ data-program={t.id}
  aria-selected={tab === t.id}
  onClick={() => setTab(t.id)}
  >
- {t.label}
+ <PortalIcon name={t.icon} size={16} />
+ <span>{t.label}</span>
  {t.locked ? <span className="tab-lock" aria-hidden="true" /> : null}
  </button>
  ))}
  </div>
 
  {tab === "private" && (
- <div className="dash-panel">
+ <div className="dash-panel dash-panel-private">
+ <div className="dash-panel-shapes" aria-hidden="true">
+ <span className="shape-blob shape-blob-sky" />
+ <span className="shape-dot shape-dot-gold" />
+ </div>
  {!access.private ? (
  <ProgramGate
  program="private"
@@ -340,7 +358,10 @@ export function DashboardTabs({
  )}
  <div className="dash-section" style={{ marginTop: "1.5rem" }}>
  <div className="dash-section-head">
- <h2>Assessment dropbox</h2>
+ <h2>
+ <IconWell name="dropbox" tone="mint" size="sm" />
+ Assessment dropbox
+ </h2>
  </div>
  <AssessmentDropbox
  role={role}
@@ -354,7 +375,11 @@ export function DashboardTabs({
  )}
 
  {tab === "masterclass" && (
- <div className="dash-panel">
+ <div className="dash-panel dash-panel-masterclass">
+ <div className="dash-panel-shapes" aria-hidden="true">
+ <span className="shape-blob shape-blob-gold" />
+ <span className="shape-ring shape-ring-navy" />
+ </div>
  {!access.masterclass ? (
  <ProgramGate
  program="masterclass"
@@ -370,7 +395,10 @@ export function DashboardTabs({
 
  <div className="dash-consult">
  <div className="dash-consult-main">
- <span className="pill">Free consult</span>
+ <span className="pill">
+ <PortalIcon name="consult" size={14} />
+ Free consult
+ </span>
  <h3>Talk through more than just content</h3>
  <p className="muted">
  Book a short call for study strategies, subject and pathway guidance, exam
@@ -396,7 +424,10 @@ export function DashboardTabs({
 
  <div className="dash-section">
  <div className="dash-section-head">
- <h2>Subject libraries</h2>
+ <h2>
+ <IconWell name="book" tone="gold" size="sm" />
+ Subject libraries
+ </h2>
  </div>
  <ResourceLibrary
  classes={masterclassClasses}
@@ -416,7 +447,11 @@ export function DashboardTabs({
  )}
 
  {tab === "library" && (
- <div className="dash-panel">
+ <div className="dash-panel dash-panel-library">
+ <div className="dash-panel-shapes" aria-hidden="true">
+ <span className="shape-blob shape-blob-violet" />
+ <span className="shape-dot shape-dot-mint" />
+ </div>
  {!access.library ? (
  <ProgramGate
  program="private"
@@ -431,7 +466,10 @@ export function DashboardTabs({
  </p>
  <div className="dash-section">
  <div className="dash-section-head">
- <h2>Library shelves</h2>
+ <h2>
+ <IconWell name="library" tone="violet" size="sm" />
+ Library shelves
+ </h2>
  </div>
  <ResourceLibrary
  classes={libraryClasses}
@@ -446,7 +484,11 @@ export function DashboardTabs({
  )}
 
  {tab === "ucat" && (
- <div className="dash-panel">
+ <div className="dash-panel dash-panel-ucat">
+ <div className="dash-panel-shapes" aria-hidden="true">
+ <span className="shape-blob shape-blob-violet" />
+ <span className="shape-ring shape-ring-gold" />
+ </div>
  {!access.ucat ? (
  <ProgramGate
  program="ucat"
@@ -458,7 +500,10 @@ export function DashboardTabs({
  <p className="muted dash-lead">UCAT libraries and upcoming sessions.</p>
  <div className="dash-section">
  <div className="dash-section-head">
- <h2>UCAT libraries</h2>
+ <h2>
+ <IconWell name="ucat" tone="violet" size="sm" />
+ UCAT libraries
+ </h2>
  </div>
  <ResourceLibrary
  classes={ucatClasses}
@@ -477,7 +522,11 @@ export function DashboardTabs({
  )}
 
  {tab === "progress" && (
- <div className="dash-panel">
+ <div className="dash-panel dash-panel-progress">
+ <div className="dash-panel-shapes" aria-hidden="true">
+ <span className="shape-blob shape-blob-mint" />
+ <span className="shape-dot shape-dot-gold" />
+ </div>
  <p className="muted dash-lead">
  Sylly-Map syllabus checklist and ATAR calculator with subject marks.
  </p>

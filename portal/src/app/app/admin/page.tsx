@@ -121,8 +121,13 @@ export default async function AdminPage() {
 
   return (
     <>
-      <p className="section-kicker">Operations</p>
-      <h1 className="section-title">Admin</h1>
+      <div className="page-hero">
+        <p className="section-kicker">
+          <span className="kicker-spark" aria-hidden="true" />
+          Operations
+        </p>
+        <h1 className="section-title">Admin</h1>
+      </div>
       <p className="muted admin-lead">
         People for membership and gated access. Access for pairs. Resources for uploads. Classes for
         subject libraries.
