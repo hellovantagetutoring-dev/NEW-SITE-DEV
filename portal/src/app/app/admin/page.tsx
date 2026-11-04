@@ -11,7 +11,7 @@ export default async function AdminPage() {
   const supabase = await createClient();
   const { data: classes } = await supabase
     .from("classes")
-    .select("id, name, subject, unit_band, stream")
+    .select("id, name, subject, unit_band, year_label, stream")
     .order("name");
 
   const firstProfiles = await supabase

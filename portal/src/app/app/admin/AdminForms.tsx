@@ -25,6 +25,7 @@ type ClassOpt = {
  name: string;
  subject: string;
  unit_band: string;
+ year_label?: string | null;
  stream?: string | null;
 };
 type ProfileOpt = {
@@ -1062,11 +1063,10 @@ export function AdminForms({
  <section className="admin-panel">
  <header className="admin-panel-head">
  <div>
- <h2>Create class</h2>
+ <h2>Classes</h2>
  <p className="muted">
- Masterclass = subject libraries for Masterclass enrolment. Resource Library = mocks /
- retrieval packs for anyone on Private or Masterclass. Private homework stays on the Private
- tab.
+ Masterclass: one library per subject for 2027. Resource Library: mocks / retrieval packs.
+ Delete a class to remove its enrolments and uploaded sets.
  </p>
  </div>
  </header>
@@ -1075,12 +1075,25 @@ export function AdminForms({
  onSubmit={(e) => {
  e.preventDefault();
  const fd = new FormData(e.currentTarget);
+ const stream = String(fd.get("stream") || "masterclass");
+ const subject = String(fd.get("subject") || "");
+ const label =
+ STUDENT_SUBJECTS.find((s) => s.value === subject)?.label ||
+ (subject === "general"
+ ? "General"
+ : subject === "retrieval"
+ ? "Retrieval practice"
+ : subject === "mocks"
+ ? "Mock exams"
+ : subject);
  post("/api/admin/create-class", {
- name: fd.get("name"),
- subject: fd.get("subject"),
+ name:
+ fd.get("name") ||
+ (stream === "masterclass" ? `${label} Masterclass 2027` : ""),
+ subject,
  unitBand: fd.get("unitBand"),
- yearLabel: fd.get("yearLabel"),
- stream: fd.get("stream"),
+ yearLabel: stream === "masterclass" ? "2027" : fd.get("yearLabel"),
+ stream,
  });
  e.currentTarget.reset();
  }}
@@ -1088,14 +1101,14 @@ export function AdminForms({
  <label className="field">
  Stream
  <select name="stream" required defaultValue="masterclass">
- <option value="masterclass">Masterclass subject library</option>
+ <option value="masterclass">Masterclass subject library (1 per subject, 2027)</option>
  <option value="library">Vantage Resource Library</option>
  <option value="private">Private (legacy class shell)</option>
  </select>
  </label>
  <label className="field">
  Name
- <input name="name" required placeholder="Methods Unit 3&4, Thu" />
+ <input name="name" placeholder="Auto: Chemistry Masterclass 2027" />
  </label>
  <label className="field">
  Subject
@@ -1112,11 +1125,11 @@ export function AdminForms({
  </label>
  <label className="field">
  Unit band
- <input name="unitBand" placeholder="Unit 3&4" />
+ <input name="unitBand" placeholder="Optional" />
  </label>
  <label className="field">
  Year label
- <input name="yearLabel" placeholder="Term 1 2027" />
+ <input name="yearLabel" defaultValue="2027" placeholder="2027" />
  </label>
  <button className="btn btn-primary" type="submit">
  Create class
@@ -1128,14 +1141,32 @@ export function AdminForms({
  <h3 className="admin-subhead">Existing classes</h3>
  <ul>
  {classes.map((c) => (
- <li key={c.id}>
+ <li key={c.id} className="admin-class-row">
+ <div>
  <strong>{c.name}</strong>
  <span className="muted">
  {" "}
  · {c.subject}
  {c.unit_band ? ` · ${c.unit_band}` : ""}
+ {c.year_label ? ` · ${c.year_label}` : ""}
  {c.stream ? ` · ${c.stream}` : ""}
  </span>
+ </div>
+ <button
+ type="button"
+ className="btn btn-ghost btn-compact"
+ onClick={() => {
+ if (
+ confirm(
+ `Delete “${c.name}”? This removes enrolments and resource sets for this class.`
+ )
+ ) {
+ post("/api/admin/delete-class", { id: c.id });
+ }
+ }}
+ >
+ Delete
+ </button>
  </li>
  ))}
  </ul>

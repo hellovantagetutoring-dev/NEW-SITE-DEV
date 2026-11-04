@@ -46,13 +46,14 @@ async function ensureMasterclass(
   }
 
   const label = subjectLabel(subjectKey);
+  const year = "2027";
   const { data: created, error: createErr } = await service
     .from("classes")
     .insert({
-      name: `${label} Masterclass`,
+      name: `${label} Masterclass ${year}`,
       subject: subjectKey,
       unit_band: "",
-      year_label: "",
+      year_label: year,
       stream: "masterclass",
     })
     .select("id, name, subject, stream")

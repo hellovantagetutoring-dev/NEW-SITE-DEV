@@ -1954,11 +1954,19 @@ button:disabled,
  gap: 0.45rem;
 }
 
-.admin-class-list li {
+.admin-class-list li,
+.admin-class-row {
  padding: 0.55rem 0.7rem;
  border-radius: 10px;
  background: color-mix(in srgb, var(--bg-navy) 3%, white);
  font-size: 0.9rem;
+}
+
+.admin-class-row {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ gap: 0.75rem;
 }
 
 /* Student / tutor dashboard polish */
